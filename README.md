@@ -1,2 +1,3 @@
-# IT-Help-Desk
-A full-stack IT Help Desk &amp; Ticketing Management System for managing employee support requests, ticket workflows, role-based access, reporting, and future AI integrations.
+This project is a full-stack IT Help Desk & Ticketing Management System developed to improve the way technical support requests are handled inside a company. Employees can create and track support tickets, while IT support agents and administrators can manage ticket assignment, priority, status updates, and resolutions from a centralized dashboard.
+
+The system is designed to reflect a real-world enterprise application, covering frontend development, backend RESTful APIs, relational database design, authentication, role-based authorization, reporting, deployment, and future AI-assisted support features.
