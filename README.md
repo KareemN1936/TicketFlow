@@ -1,3 +1,29 @@
-This project is a full-stack IT Help Desk & Ticketing Management System developed to improve the way technical support requests are handled inside a company. Employees can create and track support tickets, while IT support agents and administrators can manage ticket assignment, priority, status updates, and resolutions from a centralized dashboard.
+# IT Help Desk & Ticketing Management System
 
-The system is designed to reflect a real-world enterprise application, covering frontend development, backend RESTful APIs, relational database design, authentication, role-based authorization, reporting, deployment, and future AI-assisted support features.
+## Project Overview
+A full-stack web application designed to help employees submit IT support tickets and allow IT support agents, managers, and administrators to manage, assign, prioritize, and resolve tickets.
+
+## Main Features
+- User authentication
+- Role-based access control
+- Ticket creation and tracking
+- Ticket assignment workflow
+- Comments and internal notes
+- File attachments
+- Notifications
+- Dashboard and reporting
+- Future AI-powered ticket categorization and priority suggestion
+
+## Tech Stack
+- Frontend: React (JavaScript)
+- Styling: Tailwind CSS
+- Backend: ASP.NET Core (C#)
+- Database: SQL Server Express + SSMS
+- Authentication: JWT / ASP.NET Identity
+
+## Week 1 Deliverables
+- Requirement gathering document
+- Workflow diagrams
+- UI wireframes
+- Database schema
+- ERD diagram
