@@ -16,7 +16,7 @@ This document presents the low-fidelity UI wireframes for the IT Help Desk & Tic
 
 The image below shows the full set of wireframes in one combined view.
 
-![All Wireframes](./Seperate%20Pages/00%20All%20Wireframes.png)
+![All Wireframes](./Wireframe%20Images/00%20All%20Wireframes.png)
 
 ---
 
@@ -26,7 +26,7 @@ The image below shows the full set of wireframes in one combined view.
 
 The login page allows users to sign in with their corporate email and password to access the system dashboard.
 
-![Login Page](./Seperate%20Pages/01%20Login%20Page.png)
+![Login Page](./Wireframe%20Images/01%20Login%20Page.png)
 
 ---
 
@@ -34,7 +34,7 @@ The login page allows users to sign in with their corporate email and password t
 
 The dashboard gives users a quick overview of ticket performance through summary cards, charts, activity widgets, and AI ticket suggestion panels.
 
-![Dashboard](./Seperate%20Pages/02%20Dashboard.png)
+![Dashboard](./Wireframe%20Images/02%20Dashboard.png)
 
 ---
 
@@ -42,7 +42,7 @@ The dashboard gives users a quick overview of ticket performance through summary
 
 The ticket list page allows users to search, filter, browse, and manage support tickets, with a details preview area and workload summary beside the table.
 
-![Ticket List](./Seperate%20Pages/03%20Ticket%20List.png)
+![Ticket List](./Wireframe%20Images/03%20Ticket%20List.png)
 
 ---
 
@@ -50,7 +50,7 @@ The ticket list page allows users to search, filter, browse, and manage support 
 
 The create ticket page allows employees to submit a new support request by entering the issue details, selecting category and priority, and attaching supporting files.
 
-![Create Ticket Page](./Seperate%20Pages/04%20Create%20Ticket%20Page.png)
+![Create Ticket Page](./Wireframe%20Images/04%20Create%20Ticket%20Page.png)
 
 ---
 
@@ -58,7 +58,7 @@ The create ticket page allows employees to submit a new support request by enter
 
 The ticket details page shows the selected ticket's description, status, priority, attachments, comments, internal notes, and audit trail in a detailed view.
 
-![Ticket Details](./Seperate%20Pages/05%20Ticket%20Details.png)
+![Ticket Details](./Wireframe%20Images/05%20Ticket%20Details.png)
 
 ---
 
@@ -66,7 +66,7 @@ The ticket details page shows the selected ticket's description, status, priorit
 
 The knowledge base page helps users browse support articles by category, search documentation, and discover featured or recently added articles.
 
-![Knowledge Base](./Seperate%20Pages/06%20Knowledge%20Base.png)
+![Knowledge Base](./Wireframe%20Images/06%20Knowledge%20Base.png)
 
 ---
 
@@ -74,7 +74,7 @@ The knowledge base page helps users browse support articles by category, search 
 
 The reports page presents system performance metrics, ticket trends, resolution insights, and exportable report templates.
 
-![Reports](./Seperate%20Pages/07%20Reports.png)
+![Reports](./Wireframe%20Images/07%20Reports.png)
 
 ---
 
@@ -82,7 +82,7 @@ The reports page presents system performance metrics, ticket trends, resolution 
 
 The notifications page displays recent alerts, ticket updates, mentions, assignments, and system notifications with filtering options.
 
-![Notifications Page](./Seperate%20Pages/08%20Notifications%20Page.png)
+![Notifications Page](./Wireframe%20Images/08%20Notifications%20Page.png)
 
 ---
 
@@ -90,7 +90,7 @@ The notifications page displays recent alerts, ticket updates, mentions, assignm
 
 The admin settings page allows administrators to manage employees, roles and permissions, security settings, system settings, and recent administrative activity.
 
-![Admin Settings Page](./Seperate%20Pages/09A%20Admin%20Settings%20Page.png)
+![Admin Settings Page](./Wireframe%20Images/09A%20Admin%20Settings%20Page.png)
 
 ---
 
@@ -98,7 +98,7 @@ The admin settings page allows administrators to manage employees, roles and per
 
 This admin modal allows administrators to create a new employee account by entering identity, department, job title, and a generated password.
 
-![Admin Create Employee Account](./Seperate%20Pages/09B%20Admin%20Create%20Employee%20Account.png)
+![Admin Create Employee Account](./Wireframe%20Images/09B%20Admin%20Create%20Employee%20Account.png)
 
 ---
 
@@ -106,4 +106,4 @@ This admin modal allows administrators to create a new employee account by enter
 
 The user profile page allows users to view and update their personal information, account details, and account-related activity.
 
-![User Profile Page](./Seperate%20Pages/10%20User%20Profile%20Page.png)
+![User Profile Page](./Wireframe%20Images/10%20User%20Profile%20Page.png)
