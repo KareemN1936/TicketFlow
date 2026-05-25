@@ -1,16 +1,31 @@
+USE master;
+GO
+
+IF DB_ID('IT Management System') IS NOT NULL
+BEGIN
+    ALTER DATABASE [IT Management System] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+    DROP DATABASE [IT Management System];
+END
+GO
+
+CREATE DATABASE [IT Management System];
+GO
+
+USE [IT Management System];
+GO
 -- ============================================================
 -- 1. Role
 -- ============================================================
 
 CREATE TABLE dbo.Role
 (
-    RoleId INT IDENTITY(1,1) NOT NULL,
+    Id INT IDENTITY(1,1) NOT NULL,
     RoleName VARCHAR(50) NOT NULL,
     Description VARCHAR(255) NULL,
     CreatedDate DATETIME2 NOT NULL
         CONSTRAINT DfRole_CreatedDate DEFAULT SYSDATETIME(),
 
-    CONSTRAINT PkRole_RoleId PRIMARY KEY (RoleId),
+    CONSTRAINT PkRole_Id PRIMARY KEY (Id),
     CONSTRAINT UnRole_RoleName UNIQUE (RoleName)
 );
 GO
@@ -21,7 +36,7 @@ GO
 
 CREATE TABLE dbo.Department
 (
-    DepartmentId INT IDENTITY(1,1) NOT NULL,
+    Id INT IDENTITY(1,1) NOT NULL,
     DepartmentName VARCHAR(100) NOT NULL,
     Description VARCHAR(255) NULL,
     IsActive BIT NOT NULL
@@ -29,7 +44,7 @@ CREATE TABLE dbo.Department
     CreatedDate DATETIME2 NOT NULL
         CONSTRAINT DfDepartment_CreatedDate DEFAULT SYSDATETIME(),
 
-    CONSTRAINT PkDepartment_DepartmentId PRIMARY KEY (DepartmentId),
+    CONSTRAINT PkDepartment_Id PRIMARY KEY (Id),
     CONSTRAINT UnDepartment_DepartmentName UNIQUE (DepartmentName)
 );
 GO
@@ -40,7 +55,7 @@ GO
 
 CREATE TABLE dbo.Category
 (
-    CategoryId INT IDENTITY(1,1) NOT NULL,
+    Id INT IDENTITY(1,1) NOT NULL,
     CategoryName VARCHAR(100) NOT NULL,
     Description VARCHAR(255) NULL,
     IsActive BIT NOT NULL
@@ -48,7 +63,7 @@ CREATE TABLE dbo.Category
     CreatedDate DATETIME2 NOT NULL
         CONSTRAINT DfCategory_CreatedDate DEFAULT SYSDATETIME(),
 
-    CONSTRAINT PkCategory_CategoryId PRIMARY KEY (CategoryId),
+    CONSTRAINT PkCategory_Id PRIMARY KEY (Id),
     CONSTRAINT UnCategory_CategoryName UNIQUE (CategoryName)
 );
 GO
@@ -59,14 +74,14 @@ GO
 
 CREATE TABLE dbo.Priority
 (
-    PriorityId INT IDENTITY(1,1) NOT NULL,
+    Id INT IDENTITY(1,1) NOT NULL,
     PriorityName VARCHAR(50) NOT NULL,
     PriorityLevel INT NOT NULL,
     Description VARCHAR(255) NULL,
     CreatedDate DATETIME2 NOT NULL
         CONSTRAINT DfPriority_CreatedDate DEFAULT SYSDATETIME(),
 
-    CONSTRAINT PkPriority_PriorityId PRIMARY KEY (PriorityId),
+    CONSTRAINT PkPriority_Id PRIMARY KEY (Id),
     CONSTRAINT UnPriority_PriorityName UNIQUE (PriorityName),
     CONSTRAINT CkPriority_PriorityLevel CHECK (PriorityLevel BETWEEN 1 AND 4)
 );
@@ -78,13 +93,13 @@ GO
 
 CREATE TABLE dbo.Status
 (
-    StatusId INT IDENTITY(1,1) NOT NULL,
+    Id INT IDENTITY(1,1) NOT NULL,
     StatusName VARCHAR(50) NOT NULL,
     Description VARCHAR(255) NULL,
     CreatedDate DATETIME2 NOT NULL
         CONSTRAINT DfStatus_CreatedDate DEFAULT SYSDATETIME(),
 
-    CONSTRAINT PkStatus_StatusId PRIMARY KEY (StatusId),
+    CONSTRAINT PkStatus_Id PRIMARY KEY (Id),
     CONSTRAINT UnStatus_StatusName UNIQUE (StatusName)
 );
 GO
@@ -96,7 +111,7 @@ GO
 
 CREATE TABLE dbo.[User]
 (
-    UserId INT IDENTITY(1,1) NOT NULL,
+    Id INT IDENTITY(1,1) NOT NULL,
     RoleId INT NOT NULL,
     DepartmentId INT NULL,
     FullName VARCHAR(150) NOT NULL,
@@ -111,14 +126,14 @@ CREATE TABLE dbo.[User]
         CONSTRAINT DfUser_CreatedDate DEFAULT SYSDATETIME(),
     UpdatedDate DATETIME2 NULL,
 
-    CONSTRAINT PkUser_UserId PRIMARY KEY (UserId),
+    CONSTRAINT PkUser_Id PRIMARY KEY (Id),
     CONSTRAINT UnUser_Email UNIQUE (Email),
 
     CONSTRAINT FkUser_RoleId FOREIGN KEY (RoleId)
-        REFERENCES dbo.Role (RoleId),
+        REFERENCES dbo.Role (Id),
 
     CONSTRAINT FkUser_DepartmentId FOREIGN KEY (DepartmentId)
-        REFERENCES dbo.Department (DepartmentId)
+        REFERENCES dbo.Department (Id)
 );
 GO
 
@@ -128,7 +143,7 @@ GO
 
 CREATE TABLE dbo.Ticket
 (
-    TicketId INT IDENTITY(1,1) NOT NULL,
+    Id INT IDENTITY(1,1) NOT NULL,
     CreatedByUserId INT NOT NULL,
     CategoryId INT NOT NULL,
     PriorityId INT NOT NULL,
@@ -146,20 +161,20 @@ CREATE TABLE dbo.Ticket
     IsDeleted BIT NOT NULL
         CONSTRAINT DfTicket_IsDeleted DEFAULT 0,
 
-    CONSTRAINT PkTicket_TicketId PRIMARY KEY (TicketId),
+    CONSTRAINT PkTicket_Id PRIMARY KEY (Id),
     CONSTRAINT UnTicket_TicketNumber UNIQUE (TicketNumber),
 
     CONSTRAINT FkTicket_CreatedByUserId FOREIGN KEY (CreatedByUserId)
-        REFERENCES dbo.[User] (UserId),
+        REFERENCES dbo.[User] (Id),
 
     CONSTRAINT FkTicket_CategoryId FOREIGN KEY (CategoryId)
-        REFERENCES dbo.Category (CategoryId),
+        REFERENCES dbo.Category (Id),
 
     CONSTRAINT FkTicket_PriorityId FOREIGN KEY (PriorityId)
-        REFERENCES dbo.Priority (PriorityId),
+        REFERENCES dbo.Priority (Id),
 
     CONSTRAINT FkTicket_StatusId FOREIGN KEY (StatusId)
-        REFERENCES dbo.Status (StatusId)
+        REFERENCES dbo.Status (Id)
 );
 GO
 
@@ -169,7 +184,7 @@ GO
 
 CREATE TABLE dbo.TicketAssignment
 (
-    TicketAssignmentId INT IDENTITY(1,1) NOT NULL,
+    Id INT IDENTITY(1,1) NOT NULL,
     TicketId INT NOT NULL,
     AssignedToUserId INT NOT NULL,
     AssignedByUserId INT NOT NULL,
@@ -180,16 +195,16 @@ CREATE TABLE dbo.TicketAssignment
     IsCurrent BIT NOT NULL
         CONSTRAINT DfTicketAssignment_IsCurrent DEFAULT 1,
 
-    CONSTRAINT PkTicketAssignment_TicketAssignmentId PRIMARY KEY (TicketAssignmentId),
+    CONSTRAINT PkTicketAssignment_Id PRIMARY KEY (Id),
 
     CONSTRAINT FkTicketAssignment_TicketId FOREIGN KEY (TicketId)
-        REFERENCES dbo.Ticket (TicketId),
+        REFERENCES dbo.Ticket (Id),
 
     CONSTRAINT FkTicketAssignment_AssignedToUserId FOREIGN KEY (AssignedToUserId)
-        REFERENCES dbo.[User] (UserId),
+        REFERENCES dbo.[User] (Id),
 
     CONSTRAINT FkTicketAssignment_AssignedByUserId FOREIGN KEY (AssignedByUserId)
-        REFERENCES dbo.[User] (UserId)
+        REFERENCES dbo.[User] (Id)
 );
 GO
 
@@ -199,7 +214,7 @@ GO
 
 CREATE TABLE dbo.TicketComment
 (
-    TicketCommentId INT IDENTITY(1,1) NOT NULL,
+    Id INT IDENTITY(1,1) NOT NULL,
     TicketId INT NOT NULL,
     UserId INT NOT NULL,
     CommentText VARCHAR(MAX) NOT NULL,
@@ -209,13 +224,13 @@ CREATE TABLE dbo.TicketComment
         CONSTRAINT DfTicketComment_CreatedDate DEFAULT SYSDATETIME(),
     UpdatedDate DATETIME2 NULL,
 
-    CONSTRAINT PkTicketComment_TicketCommentId PRIMARY KEY (TicketCommentId),
+    CONSTRAINT PkTicketComment_Id PRIMARY KEY (Id),
 
     CONSTRAINT FkTicketComment_TicketId FOREIGN KEY (TicketId)
-        REFERENCES dbo.Ticket (TicketId),
+        REFERENCES dbo.Ticket (Id),
 
     CONSTRAINT FkTicketComment_UserId FOREIGN KEY (UserId)
-        REFERENCES dbo.[User] (UserId)
+        REFERENCES dbo.[User] (Id)
 );
 GO
 
@@ -225,7 +240,7 @@ GO
 
 CREATE TABLE dbo.TicketAttachment
 (
-    TicketAttachmentId INT IDENTITY(1,1) NOT NULL,
+    Id INT IDENTITY(1,1) NOT NULL,
     TicketId INT NOT NULL,
     UploadedByUserId INT NOT NULL,
     FileName VARCHAR(255) NOT NULL,
@@ -238,13 +253,13 @@ CREATE TABLE dbo.TicketAttachment
     IsDeleted BIT NOT NULL
         CONSTRAINT DfTicketAttachment_IsDeleted DEFAULT 0,
 
-    CONSTRAINT PkTicketAttachment_TicketAttachmentId PRIMARY KEY (TicketAttachmentId),
+    CONSTRAINT PkTicketAttachment_Id PRIMARY KEY (Id),
 
     CONSTRAINT FkTicketAttachment_TicketId FOREIGN KEY (TicketId)
-        REFERENCES dbo.Ticket (TicketId),
+        REFERENCES dbo.Ticket (Id),
 
     CONSTRAINT FkTicketAttachment_UploadedByUserId FOREIGN KEY (UploadedByUserId)
-        REFERENCES dbo.[User] (UserId),
+        REFERENCES dbo.[User] (Id),
 
     CONSTRAINT CkTicketAttachment_FileSizeBytes CHECK (FileSizeBytes > 0)
 );
@@ -256,7 +271,7 @@ GO
 
 CREATE TABLE dbo.TicketHistory
 (
-    TicketHistoryId INT IDENTITY(1,1) NOT NULL,
+    Id INT IDENTITY(1,1) NOT NULL,
     TicketId INT NOT NULL,
     ChangedByUserId INT NOT NULL,
     FieldName VARCHAR(100) NOT NULL,
@@ -266,13 +281,13 @@ CREATE TABLE dbo.TicketHistory
     CreatedDate DATETIME2 NOT NULL
         CONSTRAINT DfTicketHistory_CreatedDate DEFAULT SYSDATETIME(),
 
-    CONSTRAINT PkTicketHistory_TicketHistoryId PRIMARY KEY (TicketHistoryId),
+    CONSTRAINT PkTicketHistory_Id PRIMARY KEY (Id),
 
     CONSTRAINT FkTicketHistory_TicketId FOREIGN KEY (TicketId)
-        REFERENCES dbo.Ticket (TicketId),
+        REFERENCES dbo.Ticket (Id),
 
     CONSTRAINT FkTicketHistory_ChangedByUserId FOREIGN KEY (ChangedByUserId)
-        REFERENCES dbo.[User] (UserId)
+        REFERENCES dbo.[User] (Id)
 );
 GO
 
@@ -282,7 +297,7 @@ GO
 
 CREATE TABLE dbo.Notification
 (
-    NotificationId INT IDENTITY(1,1) NOT NULL,
+    Id INT IDENTITY(1,1) NOT NULL,
     UserId INT NOT NULL,
     TicketId INT NULL,
     NotificationTitle VARCHAR(150) NOT NULL,
@@ -294,13 +309,13 @@ CREATE TABLE dbo.Notification
         CONSTRAINT DfNotification_CreatedDate DEFAULT SYSDATETIME(),
     ReadDate DATETIME2 NULL,
 
-    CONSTRAINT PkNotification_NotificationId PRIMARY KEY (NotificationId),
+    CONSTRAINT PkNotification_Id PRIMARY KEY (Id),
 
     CONSTRAINT FkNotification_UserId FOREIGN KEY (UserId)
-        REFERENCES dbo.[User] (UserId),
+        REFERENCES dbo.[User] (Id),
 
     CONSTRAINT FkNotification_TicketId FOREIGN KEY (TicketId)
-        REFERENCES dbo.Ticket (TicketId)
+        REFERENCES dbo.Ticket (Id)
 );
 GO
 
@@ -310,7 +325,7 @@ GO
 
 CREATE TABLE dbo.ActivityLog
 (
-    ActivityLogId INT IDENTITY(1,1) NOT NULL,
+    Id INT IDENTITY(1,1) NOT NULL,
     UserId INT NULL,
     ActionType VARCHAR(100) NOT NULL,
     EntityName VARCHAR(100) NOT NULL,
@@ -320,21 +335,9 @@ CREATE TABLE dbo.ActivityLog
     CreatedDate DATETIME2 NOT NULL
         CONSTRAINT DfActivityLog_CreatedDate DEFAULT SYSDATETIME(),
 
-    CONSTRAINT PkActivityLog_ActivityLogId PRIMARY KEY (ActivityLogId),
+    CONSTRAINT PkActivityLog_Id PRIMARY KEY (Id),
 
     CONSTRAINT FkActivityLog_UserId FOREIGN KEY (UserId)
-        REFERENCES dbo.[User] (UserId)
+        REFERENCES dbo.[User] (Id)
 );
-GO
-
--- ============================================================
--- Verify created tables
--- ============================================================
-
-SELECT
-    TABLE_SCHEMA,
-    TABLE_NAME
-FROM INFORMATION_SCHEMA.TABLES
-WHERE TABLE_TYPE = 'BASE TABLE'
-ORDER BY TABLE_NAME;
 GO

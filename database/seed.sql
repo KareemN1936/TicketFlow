@@ -1,3 +1,6 @@
+USE [IT Management System];
+GO
+
 -- ============================================================
 -- Roles
 -- ============================================================
@@ -64,9 +67,18 @@ GO
 
 -- ============================================================
 -- Users
--- PasswordHash values are placeholders for documentation/demo.
--- In a real system, passwords must be securely hashed.
 -- ============================================================
+
+DECLARE
+    @AdminRoleId INT = (SELECT Id FROM dbo.Role WHERE RoleName = 'Admin'),
+    @AgentRoleId INT = (SELECT Id FROM dbo.Role WHERE RoleName = 'IT Support Agent'),
+    @EmployeeRoleId INT = (SELECT Id FROM dbo.Role WHERE RoleName = 'Employee'),
+    @ManagerRoleId INT = (SELECT Id FROM dbo.Role WHERE RoleName = 'Manager'),
+
+    @ItDepartmentId INT = (SELECT Id FROM dbo.Department WHERE DepartmentName = 'IT'),
+    @HrDepartmentId INT = (SELECT Id FROM dbo.Department WHERE DepartmentName = 'Human Resources'),
+    @FinanceDepartmentId INT = (SELECT Id FROM dbo.Department WHERE DepartmentName = 'Finance'),
+    @OperationsDepartmentId INT = (SELECT Id FROM dbo.Department WHERE DepartmentName = 'Operations');
 
 INSERT INTO dbo.[User]
 (
@@ -79,17 +91,35 @@ INSERT INTO dbo.[User]
     JobTitle
 )
 VALUES
-(1, 1, 'System Admin', 'admin@helpdesk.com', 'hashed_password_placeholder', '70000001', 'System Administrator'),
-(2, 1, 'Nour Haddad', 'nour.agent@helpdesk.com', 'hashed_password_placeholder', '70000002', 'IT Support Agent'),
-(2, 1, 'Karim Mansour', 'karim.agent@helpdesk.com', 'hashed_password_placeholder', '70000003', 'IT Support Agent'),
-(3, 2, 'Maya Saad', 'maya.employee@company.com', 'hashed_password_placeholder', '70000004', 'HR Employee'),
-(3, 3, 'Omar Nasser', 'omar.employee@company.com', 'hashed_password_placeholder', '70000005', 'Finance Employee'),
-(4, 4, 'Lea Khoury', 'lea.manager@company.com', 'hashed_password_placeholder', '70000006', 'Operations Manager');
+(@AdminRoleId, @ItDepartmentId, 'System Admin', 'admin@helpdesk.com', 'hashed_password_placeholder', '70000001', 'System Administrator'),
+(@AgentRoleId, @ItDepartmentId, 'Nour Haddad', 'nour.agent@helpdesk.com', 'hashed_password_placeholder', '70000002', 'IT Support Agent'),
+(@AgentRoleId, @ItDepartmentId, 'Karim Mansour', 'karim.agent@helpdesk.com', 'hashed_password_placeholder', '70000003', 'IT Support Agent'),
+(@EmployeeRoleId, @HrDepartmentId, 'Maya Saad', 'maya.employee@company.com', 'hashed_password_placeholder', '70000004', 'HR Employee'),
+(@EmployeeRoleId, @FinanceDepartmentId, 'Omar Nasser', 'omar.employee@company.com', 'hashed_password_placeholder', '70000005', 'Finance Employee'),
+(@ManagerRoleId, @OperationsDepartmentId, 'Lea Khoury', 'lea.manager@company.com', 'hashed_password_placeholder', '70000006', 'Operations Manager');
 GO
 
 -- ============================================================
 -- Tickets
 -- ============================================================
+
+DECLARE
+    @EmailCategoryId INT = (SELECT Id FROM dbo.Category WHERE CategoryName = 'Email'),
+    @HardwareCategoryId INT = (SELECT Id FROM dbo.Category WHERE CategoryName = 'Hardware'),
+    @AccessRequestCategoryId INT = (SELECT Id FROM dbo.Category WHERE CategoryName = 'Access Request'),
+    @NetworkCategoryId INT = (SELECT Id FROM dbo.Category WHERE CategoryName = 'Network'),
+
+    @MediumPriorityId INT = (SELECT Id FROM dbo.Priority WHERE PriorityName = 'Medium'),
+    @HighPriorityId INT = (SELECT Id FROM dbo.Priority WHERE PriorityName = 'High'),
+    @CriticalPriorityId INT = (SELECT Id FROM dbo.Priority WHERE PriorityName = 'Critical'),
+
+    @OpenStatusId INT = (SELECT Id FROM dbo.Status WHERE StatusName = 'Open'),
+    @InProgressStatusId INT = (SELECT Id FROM dbo.Status WHERE StatusName = 'In Progress'),
+    @PendingStatusId INT = (SELECT Id FROM dbo.Status WHERE StatusName = 'Pending'),
+
+    @MayaUserId INT = (SELECT Id FROM dbo.[User] WHERE Email = 'maya.employee@company.com'),
+    @OmarUserId INT = (SELECT Id FROM dbo.[User] WHERE Email = 'omar.employee@company.com'),
+    @LeaUserId INT = (SELECT Id FROM dbo.[User] WHERE Email = 'lea.manager@company.com');
 
 INSERT INTO dbo.Ticket
 (
@@ -103,15 +133,25 @@ INSERT INTO dbo.Ticket
     DueDate
 )
 VALUES
-(4, 4, 2, 1, 'TCK-0001', 'Outlook not opening', 'Microsoft Outlook does not open on the employee laptop.', DATEADD(DAY, 3, SYSDATETIME())),
-(5, 1, 3, 2, 'TCK-0002', 'Laptop overheating', 'The laptop fan is very loud and the device becomes hot quickly.', DATEADD(DAY, 2, SYSDATETIME())),
-(4, 5, 2, 3, 'TCK-0003', 'Need access to payroll folder', 'Employee needs access permission to the payroll shared folder.', DATEADD(DAY, 5, SYSDATETIME())),
-(6, 3, 4, 1, 'TCK-0004', 'Wi-Fi is down in operations office', 'The operations office has no Wi-Fi connectivity.', DATEADD(DAY, 1, SYSDATETIME()));
+(@MayaUserId, @EmailCategoryId, @MediumPriorityId, @OpenStatusId, 'TCK-0001', 'Outlook not opening', 'Microsoft Outlook does not open on the employee laptop.', DATEADD(DAY, 3, SYSDATETIME())),
+(@OmarUserId, @HardwareCategoryId, @HighPriorityId, @InProgressStatusId, 'TCK-0002', 'Laptop overheating', 'The laptop fan is very loud and the device becomes hot quickly.', DATEADD(DAY, 2, SYSDATETIME())),
+(@MayaUserId, @AccessRequestCategoryId, @MediumPriorityId, @PendingStatusId, 'TCK-0003', 'Need access to payroll folder', 'Employee needs access permission to the payroll shared folder.', DATEADD(DAY, 5, SYSDATETIME())),
+(@LeaUserId, @NetworkCategoryId, @CriticalPriorityId, @OpenStatusId, 'TCK-0004', 'Wi-Fi is down in operations office', 'The operations office has no Wi-Fi connectivity.', DATEADD(DAY, 1, SYSDATETIME()));
 GO
 
 -- ============================================================
 -- Ticket Assignments
 -- ============================================================
+
+DECLARE
+    @AdminUserId INT = (SELECT Id FROM dbo.[User] WHERE Email = 'admin@helpdesk.com'),
+    @NourUserId INT = (SELECT Id FROM dbo.[User] WHERE Email = 'nour.agent@helpdesk.com'),
+    @KarimUserId INT = (SELECT Id FROM dbo.[User] WHERE Email = 'karim.agent@helpdesk.com'),
+
+    @Ticket1Id INT = (SELECT Id FROM dbo.Ticket WHERE TicketNumber = 'TCK-0001'),
+    @Ticket2Id INT = (SELECT Id FROM dbo.Ticket WHERE TicketNumber = 'TCK-0002'),
+    @Ticket3Id INT = (SELECT Id FROM dbo.Ticket WHERE TicketNumber = 'TCK-0003'),
+    @Ticket4Id INT = (SELECT Id FROM dbo.Ticket WHERE TicketNumber = 'TCK-0004');
 
 INSERT INTO dbo.TicketAssignment
 (
@@ -121,15 +161,24 @@ INSERT INTO dbo.TicketAssignment
     AssignmentReason
 )
 VALUES
-(1, 2, 1, 'Assigned to email/software support agent'),
-(2, 3, 1, 'Assigned to hardware support agent'),
-(3, 2, 1, 'Assigned to access request support agent'),
-(4, 3, 1, 'Assigned to network support agent');
+(@Ticket1Id, @NourUserId, @AdminUserId, 'Assigned to email/software support agent'),
+(@Ticket2Id, @KarimUserId, @AdminUserId, 'Assigned to hardware support agent'),
+(@Ticket3Id, @NourUserId, @AdminUserId, 'Assigned to access request support agent'),
+(@Ticket4Id, @KarimUserId, @AdminUserId, 'Assigned to network support agent');
 GO
 
 -- ============================================================
 -- Ticket Comments
 -- ============================================================
+
+DECLARE
+    @NourUserId INT = (SELECT Id FROM dbo.[User] WHERE Email = 'nour.agent@helpdesk.com'),
+    @KarimUserId INT = (SELECT Id FROM dbo.[User] WHERE Email = 'karim.agent@helpdesk.com'),
+
+    @Ticket1Id INT = (SELECT Id FROM dbo.Ticket WHERE TicketNumber = 'TCK-0001'),
+    @Ticket2Id INT = (SELECT Id FROM dbo.Ticket WHERE TicketNumber = 'TCK-0002'),
+    @Ticket3Id INT = (SELECT Id FROM dbo.Ticket WHERE TicketNumber = 'TCK-0003'),
+    @Ticket4Id INT = (SELECT Id FROM dbo.Ticket WHERE TicketNumber = 'TCK-0004');
 
 INSERT INTO dbo.TicketComment
 (
@@ -139,15 +188,22 @@ INSERT INTO dbo.TicketComment
     IsInternal
 )
 VALUES
-(1, 2, 'Please restart Outlook and confirm if the issue continues.', 0),
-(2, 3, 'Internal note: possible dust buildup or battery issue.', 1),
-(3, 2, 'Access request received. Waiting for manager approval.', 0),
-(4, 3, 'Network outage is being checked by IT support.', 0);
+(@Ticket1Id, @NourUserId, 'Please restart Outlook and confirm if the issue continues.', 0),
+(@Ticket2Id, @KarimUserId, 'Internal note: possible dust buildup or battery issue.', 1),
+(@Ticket3Id, @NourUserId, 'Access request received. Waiting for manager approval.', 0),
+(@Ticket4Id, @KarimUserId, 'Network outage is being checked by IT support.', 0);
 GO
 
 -- ============================================================
 -- Ticket Attachments
 -- ============================================================
+
+DECLARE
+    @MayaUserId INT = (SELECT Id FROM dbo.[User] WHERE Email = 'maya.employee@company.com'),
+    @OmarUserId INT = (SELECT Id FROM dbo.[User] WHERE Email = 'omar.employee@company.com'),
+
+    @Ticket1Id INT = (SELECT Id FROM dbo.Ticket WHERE TicketNumber = 'TCK-0001'),
+    @Ticket2Id INT = (SELECT Id FROM dbo.Ticket WHERE TicketNumber = 'TCK-0002');
 
 INSERT INTO dbo.TicketAttachment
 (
@@ -160,13 +216,22 @@ INSERT INTO dbo.TicketAttachment
     FileSizeBytes
 )
 VALUES
-(1, 4, 'outlook-error.png', 'TCK0001_outlook_error.png', '/uploads/tickets/TCK0001/outlook-error.png', 'image/png', 245000),
-(2, 5, 'laptop-temperature.jpg', 'TCK0002_laptop_temperature.jpg', '/uploads/tickets/TCK0002/laptop-temperature.jpg', 'image/jpeg', 320000);
+(@Ticket1Id, @MayaUserId, 'outlook-error.png', 'TCK0001_outlook_error.png', '/uploads/tickets/TCK0001/outlook-error.png', 'image/png', 245000),
+(@Ticket2Id, @OmarUserId, 'laptop-temperature.jpg', 'TCK0002_laptop_temperature.jpg', '/uploads/tickets/TCK0002/laptop-temperature.jpg', 'image/jpeg', 320000);
 GO
 
 -- ============================================================
 -- Ticket History
 -- ============================================================
+
+DECLARE
+    @AdminUserId INT = (SELECT Id FROM dbo.[User] WHERE Email = 'admin@helpdesk.com'),
+    @NourUserId INT = (SELECT Id FROM dbo.[User] WHERE Email = 'nour.agent@helpdesk.com'),
+
+    @Ticket1Id INT = (SELECT Id FROM dbo.Ticket WHERE TicketNumber = 'TCK-0001'),
+    @Ticket2Id INT = (SELECT Id FROM dbo.Ticket WHERE TicketNumber = 'TCK-0002'),
+    @Ticket3Id INT = (SELECT Id FROM dbo.Ticket WHERE TicketNumber = 'TCK-0003'),
+    @Ticket4Id INT = (SELECT Id FROM dbo.Ticket WHERE TicketNumber = 'TCK-0004');
 
 INSERT INTO dbo.TicketHistory
 (
@@ -178,15 +243,26 @@ INSERT INTO dbo.TicketHistory
     ChangeReason
 )
 VALUES
-(1, 1, 'Status', NULL, 'Open', 'Ticket created'),
-(2, 1, 'Status', 'Open', 'In Progress', 'Agent started working on ticket'),
-(3, 2, 'Status', 'Open', 'Pending', 'Waiting for approval'),
-(4, 1, 'Priority', 'High', 'Critical', 'Network outage affects office operations');
+(@Ticket1Id, @AdminUserId, 'Status', NULL, 'Open', 'Ticket created'),
+(@Ticket2Id, @AdminUserId, 'Status', 'Open', 'In Progress', 'Agent started working on ticket'),
+(@Ticket3Id, @NourUserId, 'Status', 'Open', 'Pending', 'Waiting for approval'),
+(@Ticket4Id, @AdminUserId, 'Priority', 'High', 'Critical', 'Network outage affects office operations');
 GO
 
 -- ============================================================
 -- Notifications
 -- ============================================================
+
+DECLARE
+    @MayaUserId INT = (SELECT Id FROM dbo.[User] WHERE Email = 'maya.employee@company.com'),
+    @OmarUserId INT = (SELECT Id FROM dbo.[User] WHERE Email = 'omar.employee@company.com'),
+    @NourUserId INT = (SELECT Id FROM dbo.[User] WHERE Email = 'nour.agent@helpdesk.com'),
+    @KarimUserId INT = (SELECT Id FROM dbo.[User] WHERE Email = 'karim.agent@helpdesk.com'),
+
+    @Ticket1Id INT = (SELECT Id FROM dbo.Ticket WHERE TicketNumber = 'TCK-0001'),
+    @Ticket2Id INT = (SELECT Id FROM dbo.Ticket WHERE TicketNumber = 'TCK-0002'),
+    @Ticket3Id INT = (SELECT Id FROM dbo.Ticket WHERE TicketNumber = 'TCK-0003'),
+    @Ticket4Id INT = (SELECT Id FROM dbo.Ticket WHERE TicketNumber = 'TCK-0004');
 
 INSERT INTO dbo.Notification
 (
@@ -197,15 +273,32 @@ INSERT INTO dbo.Notification
     NotificationType
 )
 VALUES
-(4, 1, 'Ticket Created', 'Your ticket TCK-0001 has been created.', 'Ticket'),
-(5, 2, 'Ticket Updated', 'Your ticket TCK-0002 is now in progress.', 'Ticket'),
-(2, 3, 'New Assignment', 'Ticket TCK-0003 has been assigned to you.', 'Assignment'),
-(3, 4, 'Critical Ticket Assigned', 'Critical ticket TCK-0004 has been assigned to you.', 'Assignment');
+(@MayaUserId, @Ticket1Id, 'Ticket Created', 'Your ticket TCK-0001 has been created.', 'Ticket'),
+(@OmarUserId, @Ticket2Id, 'Ticket Updated', 'Your ticket TCK-0002 is now in progress.', 'Ticket'),
+(@NourUserId, @Ticket3Id, 'New Assignment', 'Ticket TCK-0003 has been assigned to you.', 'Assignment'),
+(@KarimUserId, @Ticket4Id, 'Critical Ticket Assigned', 'Critical ticket TCK-0004 has been assigned to you.', 'Assignment');
 GO
 
 -- ============================================================
 -- Activity Logs
 -- ============================================================
+
+DECLARE
+    @AdminUserId INT = (SELECT Id FROM dbo.[User] WHERE Email = 'admin@helpdesk.com'),
+    @MayaUserId INT = (SELECT Id FROM dbo.[User] WHERE Email = 'maya.employee@company.com'),
+    @KarimUserId INT = (SELECT Id FROM dbo.[User] WHERE Email = 'karim.agent@helpdesk.com'),
+    @NourUserId INT = (SELECT Id FROM dbo.[User] WHERE Email = 'nour.agent@helpdesk.com'),
+
+    @Ticket1Id INT = (SELECT Id FROM dbo.Ticket WHERE TicketNumber = 'TCK-0001'),
+    @Ticket4Id INT = (SELECT Id FROM dbo.Ticket WHERE TicketNumber = 'TCK-0004'),
+
+    @TicketAssignment1Id INT =
+    (
+        SELECT TOP 1 Id
+        FROM dbo.TicketAssignment
+        WHERE TicketId = (SELECT Id FROM dbo.Ticket WHERE TicketNumber = 'TCK-0001')
+        ORDER BY Id
+    );
 
 INSERT INTO dbo.ActivityLog
 (
@@ -217,8 +310,27 @@ INSERT INTO dbo.ActivityLog
     IpAddress
 )
 VALUES
-(1, 'Create', 'User', 2, 'Admin created IT support agent account.', '127.0.0.1'),
-(4, 'Create', 'Ticket', 1, 'Employee created ticket TCK-0001.', '127.0.0.1'),
-(1, 'Assign', 'TicketAssignment', 1, 'Admin assigned ticket TCK-0001 to support agent.', '127.0.0.1'),
-(3, 'Update', 'Ticket', 4, 'Support agent started reviewing network outage ticket.', '127.0.0.1');
+(@AdminUserId, 'Create', 'User', @NourUserId, 'Admin created IT support agent account.', '127.0.0.1'),
+(@MayaUserId, 'Create', 'Ticket', @Ticket1Id, 'Employee created ticket TCK-0001.', '127.0.0.1'),
+(@AdminUserId, 'Assign', 'TicketAssignment', @TicketAssignment1Id, 'Admin assigned ticket TCK-0001 to support agent.', '127.0.0.1'),
+(@KarimUserId, 'Update', 'Ticket', @Ticket4Id, 'Support agent started reviewing network outage ticket.', '127.0.0.1');
+GO
+
+-- ============================================================
+-- Verify inserted records
+-- ============================================================
+
+SELECT 'Role' AS TableName, COUNT(*) AS TotalRows FROM dbo.Role
+UNION ALL SELECT 'Department', COUNT(*) FROM dbo.Department
+UNION ALL SELECT 'Category', COUNT(*) FROM dbo.Category
+UNION ALL SELECT 'Priority', COUNT(*) FROM dbo.Priority
+UNION ALL SELECT 'Status', COUNT(*) FROM dbo.Status
+UNION ALL SELECT 'User', COUNT(*) FROM dbo.[User]
+UNION ALL SELECT 'Ticket', COUNT(*) FROM dbo.Ticket
+UNION ALL SELECT 'TicketAssignment', COUNT(*) FROM dbo.TicketAssignment
+UNION ALL SELECT 'TicketComment', COUNT(*) FROM dbo.TicketComment
+UNION ALL SELECT 'TicketAttachment', COUNT(*) FROM dbo.TicketAttachment
+UNION ALL SELECT 'TicketHistory', COUNT(*) FROM dbo.TicketHistory
+UNION ALL SELECT 'Notification', COUNT(*) FROM dbo.Notification
+UNION ALL SELECT 'ActivityLog', COUNT(*) FROM dbo.ActivityLog;
 GO
