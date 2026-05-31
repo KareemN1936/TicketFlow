@@ -22,6 +22,7 @@ public class AuthController : ControllerBase
         _jwtService = jwtService;
     }
 
+    [Authorize(Roles = RoleNames.Admin)]
     [HttpPost("register")]
     public async Task<IActionResult> Register(RegisterRequest request)
     {

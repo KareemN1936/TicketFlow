@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 
 function Login() {
@@ -67,10 +67,6 @@ function Login() {
           Login
         </button>
       </form>
-
-      <p>
-        Do not have an account? <Link to="/register">Register</Link>
-      </p>
     </div>
   );
 }

@@ -25,16 +25,6 @@ export function AuthProvider({ children }) {
     return data;
   }
 
-  async function register(fullName, email, password) {
-    const response = await apiClient.post("/auth/register", {
-      fullName,
-      email,
-      password,
-    });
-
-    return response.data;
-  }
-
   function logout() {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -42,7 +32,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout }}>
+    <AuthContext.Provider value={{ user, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
