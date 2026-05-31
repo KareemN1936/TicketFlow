@@ -1,8 +1,8 @@
 # System Workflows
 
-## IT Help Desk & Ticketing Management System
+## TicketFlow
 
-This document presents the main system workflows for the IT Help Desk & Ticketing Management System. These workflows explain how users interact with the application during authentication, ticket creation, ticket assignment, ticket resolution, and notifications.
+This document presents the main system workflows for TicketFlow. These workflows explain how users interact with the application during authentication, ticket creation, ticket assignment, ticket resolution, and notifications.
 
 ---
 

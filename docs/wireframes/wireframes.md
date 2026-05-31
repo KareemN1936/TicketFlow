@@ -1,14 +1,14 @@
 # UI Wireframes
 
-## IT Help Desk & Ticketing Management System
+## TicketFlow
 
-This document presents the low-fidelity UI wireframes for the IT Help Desk & Ticketing Management System. The wireframes cover authentication, dashboard monitoring, ticket management, notifications, reports, admin configuration, the knowledge base, and user profile management.
+This document presents the low-fidelity UI wireframes for TicketFlow. The wireframes cover authentication, dashboard monitoring, ticket management, notifications, reports, admin configuration, the knowledge base, and user profile management.
 
 ---
 
 ## Figma Link
 
-[View the wireframes in Figma](https://www.figma.com/design/x2wpWmk0lBzM7zfVjkfc8C/IT-Help-Desk-Low-Fidelity-Wireframes?node-id=0-1&t=Q2oHwG7AKaknQHPz-1)
+[View the wireframes in Figma](https://www.figma.com/design/x2wpWmk0lBzM7zfVjkfc8C/TicketFlow-Low-Fidelity-Wireframes?node-id=0-1&t=Q2oHwG7AKaknQHPz-1)
 
 ---
 

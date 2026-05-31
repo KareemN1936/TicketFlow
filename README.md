@@ -1,7 +1,7 @@
-# IT Help Desk & Ticketing Management System
+# TicketFlow
 
 ## Project Overview
-A full-stack web application designed to help employees submit IT support tickets and allow IT support agents, managers, and administrators to manage, assign, prioritize, and resolve tickets.
+TicketFlow is a full-stack web application designed to help employees submit IT support tickets and allow IT support agents, managers, and administrators to manage, assign, prioritize, and resolve tickets.
 
 ## Main Features
 - User authentication

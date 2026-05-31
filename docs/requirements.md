@@ -1,10 +1,10 @@
 # Requirements Document
 
-## IT Help Desk & Ticketing Management System
+## TicketFlow
 
 ## 1. Project Scope
 
-The **IT Help Desk & Ticketing Management System** is a full-stack web application designed to help employees submit technical support requests and allow IT support agents, managers, and administrators to manage tickets efficiently.
+**TicketFlow** is a full-stack web application designed to help employees submit technical support requests and allow IT support agents, managers, and administrators to manage tickets efficiently.
 
 The system will support user authentication, role-based access control, ticket creation and tracking, assignment workflows, comments, attachments, notifications, dashboards, reports, and future AI-powered features such as automatic categorization and priority suggestion.
 

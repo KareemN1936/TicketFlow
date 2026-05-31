@@ -79,9 +79,9 @@ INSERT INTO dbo.[User]
     JobTitle
 )
 VALUES
-(1, 1, 'System Admin', 'admin@helpdesk.com', 'hashed_password_placeholder', '70000001', 'System Administrator'),
-(2, 1, 'Nour Haddad', 'nour.agent@helpdesk.com', 'hashed_password_placeholder', '70000002', 'IT Support Agent'),
-(2, 1, 'Karim Mansour', 'karim.agent@helpdesk.com', 'hashed_password_placeholder', '70000003', 'IT Support Agent'),
+(1, 1, 'System Admin', 'admin@ticketflow.com', 'hashed_password_placeholder', '70000001', 'System Administrator'),
+(2, 1, 'Nour Haddad', 'nour.agent@ticketflow.com', 'hashed_password_placeholder', '70000002', 'IT Support Agent'),
+(2, 1, 'Karim Mansour', 'karim.agent@ticketflow.com', 'hashed_password_placeholder', '70000003', 'IT Support Agent'),
 (3, 2, 'Maya Saad', 'maya.employee@company.com', 'hashed_password_placeholder', '70000004', 'HR Employee'),
 (3, 3, 'Omar Nasser', 'omar.employee@company.com', 'hashed_password_placeholder', '70000005', 'Finance Employee'),
 (4, 4, 'Lea Khoury', 'lea.manager@company.com', 'hashed_password_placeholder', '70000006', 'Operations Manager');
