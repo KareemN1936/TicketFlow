@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import horizontalLogo from "../assets/logo horizontal.png";
 import "../App.css";
@@ -133,14 +133,14 @@ function Login() {
                 >
                   {isPasswordVisible ? (
                     <svg aria-hidden="true" viewBox="0 0 24 24">
-                      <path d="m3 3 18 18" />
-                      <path d="M10.6 10.7a2 2 0 0 0 2.7 2.7" />
-                      <path d="M9.9 4.2A10.8 10.8 0 0 1 12 4c5 0 8.5 4.2 9.5 6.1a4 4 0 0 1 0 3.8 13.5 13.5 0 0 1-2.4 3.1M6.6 6.6a13.5 13.5 0 0 0-4.1 3.5 4 4 0 0 0 0 3.8C3.5 15.8 7 20 12 20a10.8 10.8 0 0 0 4.1-.8" />
+                      <path d="M2.5 10.1a4 4 0 0 0 0 3.8C3.5 15.8 7 20 12 20s8.5-4.2 9.5-6.1a4 4 0 0 0 0-3.8C20.5 8.2 17 4 12 4S3.5 8.2 2.5 10.1Z" />
+                      <circle cx="12" cy="12" r="3" />
                     </svg>
                   ) : (
                     <svg aria-hidden="true" viewBox="0 0 24 24">
-                      <path d="M2.5 10.1a4 4 0 0 0 0 3.8C3.5 15.8 7 20 12 20s8.5-4.2 9.5-6.1a4 4 0 0 0 0-3.8C20.5 8.2 17 4 12 4S3.5 8.2 2.5 10.1Z" />
-                      <circle cx="12" cy="12" r="3" />
+                      <path d="m3 3 18 18" />
+                      <path d="M10.6 10.7a2 2 0 0 0 2.7 2.7" />
+                      <path d="M9.9 4.2A10.8 10.8 0 0 1 12 4c5 0 8.5 4.2 9.5 6.1a4 4 0 0 1 0 3.8 13.5 13.5 0 0 1-2.4 3.1M6.6 6.6a13.5 13.5 0 0 0-4.1 3.5 4 4 0 0 0 0 3.8C3.5 15.8 7 20 12 20a10.8 10.8 0 0 0 4.1-.8" />
                     </svg>
                   )}
                 </button>
@@ -152,7 +152,7 @@ function Login() {
                 <input type="checkbox" defaultChecked />
                 <span>Remember me</span>
               </label>
-              <a href="#forgot-password">Forgot password?</a>
+              <Link to="/forgot-password">Forgot password?</Link>
             </div>
 
             <div className="ticket-login-actions">

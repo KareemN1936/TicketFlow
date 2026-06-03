@@ -2047,7 +2047,6 @@
 .chart-column:nth-child(6) .chart-bar { animation-delay: 750ms; }
 .chart-column:nth-child(7) .chart-bar { animation-delay: 800ms; }
 
-.ticket-login-page,
 .unauthorized-page {
   animation: dashboard-fade-in 320ms ease-out both;
 }
@@ -2388,6 +2387,31 @@
   stroke: currentColor;
 }
 
+.ticket-password-guidance {
+  margin: 0 0 16px;
+  padding: 16px 18px;
+  border-radius: 14px;
+  background: rgba(235, 246, 255, 0.92);
+  border: 1px solid rgba(37, 99, 235, 0.16);
+  color: #0f2d59;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.ticket-password-guidance p {
+  margin: 0 0 10px;
+  font-weight: 600;
+}
+
+.ticket-password-guidance ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.ticket-password-guidance li {
+  margin-bottom: 8px;
+}
+
 .ticket-login-options {
   display: flex;
   align-items: center;
@@ -2396,6 +2420,11 @@
   margin: 2px 0 28px;
   color: #53688f;
   font-size: 13px;
+}
+
+.ticket-login-options.ticket-forgot-back {
+  justify-content: center;
+  margin-top: 32px;
 }
 
 .ticket-login-options label {
@@ -2632,4 +2661,81 @@
   .ticket-login-card-header h1 {
     font-size: 23px;
   }
+}
+
+.ticket-code-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.ticket-code-input {
+  min-height: 55px;
+  border: 1px solid #c8d4e8;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.88);
+  color: #10224d;
+  font: inherit;
+  font-size: 24px;
+  font-weight: 700;
+  text-align: center;
+  outline: none;
+  transition: 0.2s ease;
+}
+
+.ticket-code-input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+}
+
+.ticket-forgot-code-toast,
+.ticket-forgot-code-notice {
+  margin-bottom: 22px;
+  padding: 16px 18px;
+  border-radius: 14px;
+  background: rgba(235, 246, 255, 0.92);
+  border: 1px solid rgba(37, 99, 235, 0.16);
+  color: #0f2d59;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.ticket-forgot-code-notice {
+  background: rgba(238, 245, 255, 0.98);
+}
+
+.ticket-forgot-actions {
+  display: grid;
+  gap: 14px;
+  margin-top: -10px;
+  margin-bottom: 18px;
+}
+
+.ticket-forgot-actions button,
+.ticket-forgot-actions span {
+  font-size: 13px;
+}
+
+.ticket-forgot-resend {
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #075ee5;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ticket-forgot-resend:disabled {
+  color: #9aa9c4;
+  cursor: not-allowed;
+}
+
+.ticket-forgot-timers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  color: #53688f;
+  line-height: 1.4;
 }

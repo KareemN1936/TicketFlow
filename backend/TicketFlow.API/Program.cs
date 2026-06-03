@@ -27,13 +27,19 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 .AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders();
 
+builder.Services.Configure<DataProtectionTokenProviderOptions>(options =>
+{
+    options.TokenLifespan = TimeSpan.FromMinutes(15);
+});
+
 builder.Services.AddScoped<JwtService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
 
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("ReactPolicy", policy =>
     {
-        policy.WithOrigins("http://localhost:5173")
+        policy.WithOrigins("http://localhost:5173", "http://localhost:5174")
               .AllowAnyHeader()
               .AllowAnyMethod();
     });
@@ -99,6 +105,7 @@ var app = builder.Build();
 
 await ApplyMigrationsAsync(app);
 await SeedRolesAsync(app);
+await SeedTestUserAsync(app);
 
 if (app.Environment.IsDevelopment())
 {
@@ -145,5 +152,29 @@ static async Task SeedRolesAsync(WebApplication app)
         {
             await roleManager.CreateAsync(new IdentityRole(role));
         }
+    }
+}
+
+static async Task SeedTestUserAsync(WebApplication app)
+{
+    using var scope = app.Services.CreateScope();
+
+    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+    
+    var testEmail = "test@example.com";
+    var testUser = await userManager.FindByEmailAsync(testEmail);
+    
+    if (testUser == null)
+    {
+        var user = new ApplicationUser
+        {
+            FullName = "Test User",
+            UserName = testEmail,
+            Email = testEmail,
+            EmailConfirmed = true
+        };
+        
+        await userManager.CreateAsync(user, "TestPassword123!");
+        await userManager.AddToRoleAsync(user, RoleNames.Employee);
     }
 }
