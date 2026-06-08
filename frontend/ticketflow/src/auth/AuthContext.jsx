@@ -28,6 +28,7 @@ export function AuthProvider({ children }) {
   function logout() {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+    sessionStorage.removeItem("ticketflow-dashboard-animated");
     setUser(null);
   }
 

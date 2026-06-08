@@ -107,12 +107,12 @@ public class AuthController : ControllerBase
     [HttpPost("forgot-password")]
     public async Task<IActionResult> ForgotPassword(ForgotPasswordRequest request)
     {
-        var user = await _userManager.FindByEmailAsync(request.Email);
+        var email = request.Email.Trim();
+        var user = await _userManager.FindByEmailAsync(email);
 
-        // Return generic response for security (user enumeration prevention)
         if (user == null)
         {
-            return Ok(new { message = "If this email exists, a password reset link has been sent." });
+            return NotFound(new { message = "No account exists with this email address." });
         }
 
         try
@@ -135,7 +135,7 @@ public class AuthController : ControllerBase
             // Send email
             await _emailService.SendEmailAsync(user.Email ?? string.Empty, "Password Reset Request - TicketFlow", emailContent);
 
-            return Ok(new { message = "If this email exists, a password reset link has been sent." });
+            return Ok(new { message = "A password reset link has been sent." });
         }
         catch (Exception ex)
         {

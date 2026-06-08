@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import iconLogo from "../assets/Logo Icon only.png";
 import { dashboardDataByRole, quickActionsByRole } from "../data/mockDashboardData";
@@ -157,12 +158,21 @@ function AdminStats({ stats }) {
 
 function Dashboard() {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const [shouldAnimate] = useState(() => {
+    const hasAnimated = sessionStorage.getItem("ticketflow-dashboard-animated");
+
+    if (!hasAnimated) {
+      sessionStorage.setItem("ticketflow-dashboard-animated", "true");
+      return true;
+    }
+
+    return false;
+  });
   const [query, setQuery] = useState("");
-  const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
-  const [newTicketTitle, setNewTicketTitle] = useState("");
   const activeRole = normalizeRole(user?.roles);
   const dashboardData = dashboardDataByRole[activeRole];
-  const [activities, setActivities] = useState(dashboardData.activities);
+  const [activities] = useState(dashboardData.activities);
   const normalizedQuery = query.trim().toLowerCase();
   const isEmployee = activeRole === "Employee";
   const isAgent = activeRole === "ITSupportAgent";
@@ -188,21 +198,12 @@ function Dashboard() {
     URL.revokeObjectURL(url);
   }
 
-  function createTicket(event) {
-    event.preventDefault();
-    const title = newTicketTitle.trim();
-    if (!title) return;
-    setActivities((current) => [{ id: Date.now(), tone: "blue", title: `New ticket created: ${title}`, meta: "Just now", author: user?.fullName || "TicketFlow User" }, ...current]);
-    setNewTicketTitle("");
-    setIsTicketModalOpen(false);
-  }
-
-  return <div className="dashboard-shell">
+  return <div className={`dashboard-shell${shouldAnimate ? "" : " dashboard-static"}`}>
     <aside className="sidebar">
       <div className="sidebar-brand"><span className="sidebar-logo"><img src={iconLogo} alt="" /></span><div><h2>TicketFl<span className="sidebar-brand-accent">o</span>w</h2><p>IT Service Management</p></div></div>
-      <nav className="sidebar-nav" aria-label="Primary navigation"><div className="sidebar-nav-primary">{navItemsByRole[activeRole].map(([id, label, icon, badge]) => <button className={`sidebar-link${id === "dashboard" ? " active" : ""}`} type="button" key={id} aria-current={id === "dashboard" ? "page" : undefined} onClick={id === "create" ? () => setIsTicketModalOpen(true) : undefined}><span className={`sidebar-link-icon${id === "dashboard" ? " active" : ""}`}><Icon name={icon} size={18} /></span><span className="sidebar-link-label">{label}</span>{badge > 0 && <span className="sidebar-link-badge">{badge}</span>}</button>)}</div>
+      <nav className="sidebar-nav" aria-label="Primary navigation"><div className="sidebar-nav-primary">{navItemsByRole[activeRole].map(([id, label, icon, badge]) => <button className={`sidebar-link${id === "dashboard" ? " active" : ""}`} type="button" key={id} aria-current={id === "dashboard" ? "page" : undefined} onClick={id === "tickets" || id === "assigned" ? () => navigate("/tickets") : id === "create" ? () => navigate("/tickets/create") : undefined}><span className={`sidebar-link-icon${id === "dashboard" ? " active" : ""}`}><Icon name={icon} size={18} /></span><span className="sidebar-link-label">{label}</span>{badge > 0 && <span className="sidebar-link-badge">{badge}</span>}</button>)}</div>
         <div className="sidebar-nav-secondary">{canManageUsers && <button className="sidebar-link" type="button"><span className="sidebar-link-icon"><Icon name="gear" size={18} /></span><span className="sidebar-link-label">Settings</span></button>}<button className="sidebar-link" type="button"><span className="sidebar-link-icon"><Icon name="user" size={18} /></span><span className="sidebar-link-label">Profile</span></button><div className="sidebar-divider" /><button className="sidebar-link sidebar-logout" type="button" onClick={logout}><span className="sidebar-link-icon"><Icon name="logout" size={18} /></span><span className="sidebar-link-label">Log out</span></button></div>
-      </nav>{(isEmployee || isAdmin) && <button className="sidebar-create-ticket" type="button" onClick={() => setIsTicketModalOpen(true)}><Icon name="plus" size={18} />Create Ticket</button>}
+      </nav>{(isEmployee || isAdmin) && <button className="sidebar-create-ticket" type="button" onClick={() => navigate("/tickets/create")}><Icon name="plus" size={18} />Create Ticket</button>}
     </aside>
 
     <div className="dashboard-main"><header className="topbar"><label className="dashboard-search"><Icon name="search" size={16} /><span className="sr-only">Search dashboard</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={dashboardData.searchPlaceholder} />{query && <button className="search-clear" type="button" onClick={() => setQuery("")} aria-label="Clear search"><Icon name="close" size={14} /></button>}</label><div className="topbar-actions"><button className="icon-button" type="button" aria-label="Help"><Icon name="help" size={18} /></button><button className="icon-button" type="button" aria-label="Applications"><Icon name="apps" size={18} /></button><button className="icon-button icon-button-notify" type="button" aria-label="Notifications"><Icon name="bell" size={18} /><span className="notify-badge">3</span></button><span className="topbar-divider" /><div className="user-pill"><div><strong>{user?.fullName || "IT User"}</strong><span>{activeRole}</span></div><span className="avatar" aria-hidden="true">{initials}</span></div></div></header>
@@ -210,15 +211,14 @@ function Dashboard() {
       <main className="dashboard-content"><section className="dashboard-heading"><div><p className="dashboard-welcome">Welcome back, {user?.fullName || "TicketFlow User"} <span>{activeRole}</span></p><h1>{dashboardData.title}</h1><p>{dashboardData.subtitle}</p></div><div className="heading-actions"><button className="dashboard-button dashboard-button-secondary" type="button"><Icon name="calendar" size={16} />Last 24 Hours</button>{canExportReport && <button className="dashboard-button dashboard-button-primary" type="button" onClick={exportReport}><Icon name="download" size={16} />Export Report</button>}</div></section>
         <KpiGrid metrics={dashboardData.metrics} />
 
-        {isEmployee && <><div className="dashboard-grid dashboard-grid-balanced"><QuickActions activeRole={activeRole} onCreateTicket={() => setIsTicketModalOpen(true)} /><ActivityPanel activities={visibleActivities} title="My Notifications & Updates" /></div><RecentTicketsTable activeRole={activeRole} tickets={visibleTickets} /><KnowledgeSuggestions articles={dashboardData.knowledgeArticles} /></>}
+        {isEmployee && <><div className="dashboard-grid dashboard-grid-balanced"><QuickActions activeRole={activeRole} onCreateTicket={() => navigate("/tickets/create")} /><ActivityPanel activities={visibleActivities} title="My Notifications & Updates" /></div><RecentTicketsTable activeRole={activeRole} tickets={visibleTickets} /><KnowledgeSuggestions articles={dashboardData.knowledgeArticles} /></>}
 
-        {isAgent && <><div className="dashboard-grid dashboard-grid-balanced"><SlaPanel items={dashboardData.slaRisks} /><QuickActions activeRole={activeRole} /></div><RecentTicketsTable activeRole={activeRole} tickets={visibleTickets} /><div className="dashboard-grid dashboard-grid-balanced"><ActivityPanel activities={visibleActivities} title="Assigned Ticket Activity" /><TechnicianWorkload technicians={[dashboardData.workload]} title="My Workload & Capacity" /></div></>}
+        {isAgent && <><div className="dashboard-grid dashboard-grid-balanced"><SlaPanel items={dashboardData.slaRisks} /><QuickActions activeRole={activeRole} onCreateTicket={() => navigate("/tickets/create")} /></div><RecentTicketsTable activeRole={activeRole} tickets={visibleTickets} /><div className="dashboard-grid dashboard-grid-balanced"><ActivityPanel activities={visibleActivities} title="Assigned Ticket Activity" /><TechnicianWorkload technicians={[dashboardData.workload]} title="My Workload & Capacity" /></div></>}
 
-        {canViewSystemAnalytics && <><div className="dashboard-grid dashboard-grid-balanced">{isAdmin ? <SlaPanel items={dashboardData.slaRisks} /> : <TrendChart />}<QuickActions activeRole={activeRole} /></div><div className="distribution-grid"><DistributionPanel title="Tickets by Status" subtitle="Current queue distribution" items={dashboardData.statusDistribution} /><DistributionPanel title="Tickets by Category" subtitle="Requests grouped by service area" items={dashboardData.categories} /><DistributionPanel title="Tickets by Priority" subtitle="Priority mix across open tickets" items={dashboardData.priorities} /></div>{isAdmin && <div className="dashboard-grid"><TrendChart /><AdminStats stats={dashboardData.userStats} /></div>}{isManager && <ActivityPanel activities={visibleActivities} title="Recent Team Activity" />}<RecentTicketsTable activeRole={activeRole} tickets={visibleTickets} />{canViewTechnicianWorkload && <TechnicianWorkload technicians={dashboardData.technicians} title={isManager ? "Agent Performance" : "Technician Workload & Performance"} />}</>}
+        {canViewSystemAnalytics && <><div className="dashboard-grid dashboard-grid-balanced">{isAdmin ? <SlaPanel items={dashboardData.slaRisks} /> : <TrendChart />}<QuickActions activeRole={activeRole} onCreateTicket={() => navigate("/tickets/create")} /></div><div className="distribution-grid"><DistributionPanel title="Tickets by Status" subtitle="Current queue distribution" items={dashboardData.statusDistribution} /><DistributionPanel title="Tickets by Category" subtitle="Requests grouped by service area" items={dashboardData.categories} /><DistributionPanel title="Tickets by Priority" subtitle="Priority mix across open tickets" items={dashboardData.priorities} /></div>{isAdmin && <div className="dashboard-grid"><TrendChart /><AdminStats stats={dashboardData.userStats} /></div>}{isManager && <ActivityPanel activities={visibleActivities} title="Recent Team Activity" />}<RecentTicketsTable activeRole={activeRole} tickets={visibleTickets} />{canViewTechnicianWorkload && <TechnicianWorkload technicians={dashboardData.technicians} title={isManager ? "Agent Performance" : "Technician Workload & Performance"} />}</>}
       </main>
     </div>
 
-    {isTicketModalOpen && <div className="modal-backdrop" role="presentation" onClick={() => setIsTicketModalOpen(false)}><section className="card ticket-modal" role="dialog" aria-modal="true" aria-labelledby="new-ticket-heading" onClick={(event) => event.stopPropagation()}><div className="modal-header"><div><p className="eyebrow">TicketFlow</p><h2 id="new-ticket-heading">Create Ticket</h2></div><button className="icon-button modal-close" type="button" aria-label="Close ticket form" onClick={() => setIsTicketModalOpen(false)}><Icon name="close" size={20} /></button></div><form onSubmit={createTicket}><label className="modal-field"><span>Issue summary</span><input value={newTicketTitle} onChange={(event) => setNewTicketTitle(event.target.value)} placeholder="Describe the support request..." autoFocus required /></label><div className="modal-actions"><button className="dashboard-button dashboard-button-secondary" type="button" onClick={() => setIsTicketModalOpen(false)}>Cancel</button><button className="dashboard-button dashboard-button-primary" type="submit">Create Ticket</button></div></form></section></div>}
   </div>;
 }
 

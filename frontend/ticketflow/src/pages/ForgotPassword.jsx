@@ -8,6 +8,7 @@ function ForgotPassword() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+  const [submittedEmail, setSubmittedEmail] = useState("");
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -24,7 +25,7 @@ function ForgotPassword() {
       const response = await fetch("http://localhost:5215/api/auth/forgot-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email: email.trim() }),
       });
 
       if (!response.ok) {
@@ -34,6 +35,7 @@ function ForgotPassword() {
         return;
       }
 
+      setSubmittedEmail(email.trim());
       setEmailSent(true);
       setEmail("");
     } catch (err) {
@@ -46,6 +48,7 @@ function ForgotPassword() {
 
   function handleTryAnother() {
     setEmailSent(false);
+    setSubmittedEmail("");
     setError("");
   }
 
@@ -105,7 +108,7 @@ function ForgotPassword() {
           {emailSent ? (
             <div className="ticket-forgot-success-message">
               <p>
-                We've sent a password reset link to <strong>{email}</strong>.
+                We've sent a password reset link to <strong>{submittedEmail}</strong>.
               </p>
               <p>Click the link in the email to reset your password. The link will expire in 15 minutes.</p>
             </div>
