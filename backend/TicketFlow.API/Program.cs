@@ -105,6 +105,7 @@ var app = builder.Build();
 
 await ApplyMigrationsAsync(app);
 await SeedRolesAsync(app);
+await SeedAdminUserAsync(app);
 await SeedTestUserAsync(app);
 
 if (app.Environment.IsDevelopment())
@@ -176,5 +177,52 @@ static async Task SeedTestUserAsync(WebApplication app)
         
         await userManager.CreateAsync(user, "TestPassword123!");
         await userManager.AddToRoleAsync(user, RoleNames.Employee);
+    }
+}
+
+static async Task SeedAdminUserAsync(WebApplication app)
+{
+    using var scope = app.Services.CreateScope();
+
+    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+
+    const string adminEmail = "admin@test.com";
+    const string adminPassword = "Admin123.";
+
+    if (!await roleManager.RoleExistsAsync(RoleNames.Admin))
+    {
+        await roleManager.CreateAsync(new IdentityRole(RoleNames.Admin));
+    }
+
+    var adminUser = await userManager.FindByEmailAsync(adminEmail);
+
+    if (adminUser == null)
+    {
+        adminUser = new ApplicationUser
+        {
+            FullName = "Admin",
+            UserName = adminEmail,
+            Email = adminEmail,
+            EmailConfirmed = true
+        };
+
+        var result = await userManager.CreateAsync(adminUser, adminPassword);
+
+        if (result.Succeeded)
+        {
+            await userManager.AddToRoleAsync(adminUser, RoleNames.Admin);
+        }
+        else
+        {
+            foreach (var error in result.Errors)
+            {
+                Console.WriteLine($"Admin seed error: {error.Description}");
+            }
+        }
+    }
+    else if (!await userManager.IsInRoleAsync(adminUser, RoleNames.Admin))
+    {
+        await userManager.AddToRoleAsync(adminUser, RoleNames.Admin);
     }
 }

@@ -2,15 +2,20 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import AppLayout from "../components/AppLayout";
 import TicketIcon from "../components/TicketIcon";
+import { useAuth } from "../auth/AuthContext";
 import { deleteTicket, getTickets } from "../services/ticketService";
 import { getApiErrorMessage } from "../utils/apiError";
 import { formatTicketDate, toBadgeClass } from "../utils/ticketFormatting";
 
 function Tickets() {
+  const { user } = useAuth();
   const [tickets, setTickets] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [deletingId, setDeletingId] = useState(null);
+  const roles = user?.roles || [];
+  const canManageWorkflow = roles.some((role) => ["Admin", "ITSupportAgent", "Manager"].includes(role));
+  const isEmployee = roles.includes("Employee") && !canManageWorkflow;
 
   useEffect(() => {
     let ignore = false;
@@ -79,7 +84,7 @@ function Tickets() {
       <section className="card workload-panel ticket-list-card">
         <div className="workload-header">
           <div>
-            <h2>All Tickets</h2>
+            <h2>{isEmployee ? "My Tickets" : "All Tickets"}</h2>
             <span className="panel-subtitle">
               {isLoading ? "Loading ticket queue..." : `${tickets.length} ticket${tickets.length === 1 ? "" : "s"}`}
             </span>
@@ -111,6 +116,8 @@ function Tickets() {
                   <th>Category</th>
                   <th>Priority</th>
                   <th>Status</th>
+                  <th>Created by</th>
+                  <th>Assigned agent</th>
                   <th>Created</th>
                   <th className="ticket-actions-heading">Actions</th>
                 </tr>
@@ -131,24 +138,30 @@ function Tickets() {
                         {ticket.statusName}
                       </span>
                     </td>
+                    <td>{ticket.createdByUserName || "Unknown"}</td>
+                    <td>{ticket.assignedToUserName || "Unassigned"}</td>
                     <td>{formatTicketDate(ticket.createdAt)}</td>
                     <td>
                       <div className="ticket-row-actions">
                         <Link className="ticket-action-button" to={`/tickets/${ticket.id}`} title="View ticket">
                           <TicketIcon name="eye" size={16} /><span>View</span>
                         </Link>
-                        <Link className="ticket-action-button" to={`/tickets/${ticket.id}/edit`} title="Edit ticket">
-                          <TicketIcon name="edit" size={16} /><span>Edit</span>
-                        </Link>
-                        <button
-                          className="ticket-action-button ticket-action-danger"
-                          type="button"
-                          disabled={deletingId === ticket.id}
-                          onClick={() => handleDelete(ticket)}
-                        >
-                          <TicketIcon name="trash" size={16} />
-                          <span>{deletingId === ticket.id ? "Deleting" : "Delete"}</span>
-                        </button>
+                        {(canManageWorkflow || isEmployee) && (
+                          <Link className="ticket-action-button" to={`/tickets/${ticket.id}/edit`} title="Edit ticket">
+                            <TicketIcon name="edit" size={16} /><span>Edit</span>
+                          </Link>
+                        )}
+                        {(canManageWorkflow || isEmployee) && (
+                          <button
+                            className="ticket-action-button ticket-action-danger"
+                            type="button"
+                            disabled={deletingId === ticket.id}
+                            onClick={() => handleDelete(ticket)}
+                          >
+                            <TicketIcon name="trash" size={16} />
+                            <span>{deletingId === ticket.id ? "Deleting" : "Delete"}</span>
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

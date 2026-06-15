@@ -29,4 +29,12 @@ public class TicketResponse
     public DateTime CreatedAt { get; set; }
 
     public DateTime? UpdatedAt { get; set; }
+    
+    public string? AssignedToUserId { get; set; }
+
+    public string AssignedToUserName { get; set; } = string.Empty;
+
+    public List<TicketCommentResponse> Comments { get; set; } = new();
+
+    public List<ActivityLogResponse> ActivityLogs { get; set; } = new();
 }

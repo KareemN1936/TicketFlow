@@ -14,6 +14,10 @@ public class Ticket
 
     public ApplicationUser? CreatedByUser { get; set; }
 
+    public string? AssignedToUserId { get; set; }
+
+    public ApplicationUser? AssignedToUser { get; set; }
+
     public int CategoryId { get; set; }
 
     public Category? Category { get; set; }
@@ -29,4 +33,8 @@ public class Ticket
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public DateTime? UpdatedAt { get; set; }
+
+    public ICollection<TicketComment> Comments { get; set; } = new List<TicketComment>();
+
+    public ICollection<ActivityLog> ActivityLogs { get; set; } = new List<ActivityLog>();
 }
