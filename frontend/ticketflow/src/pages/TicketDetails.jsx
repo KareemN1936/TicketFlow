@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import AppLayout from "../components/AppLayout";
 import TicketIcon from "../components/TicketIcon";
 import { useAuth } from "../auth/AuthContext";
+import { getPrimaryRole } from "../auth/roles";
 import {
   addTicketComment,
   assignTicket,
@@ -15,6 +16,11 @@ import {
 } from "../services/ticketService";
 import { getApiErrorMessage } from "../utils/apiError";
 import { formatTicketDate, toBadgeClass } from "../utils/ticketFormatting";
+import {
+  downloadTicketAttachment,
+  getTicketAttachments,
+} from "../services/attachmentService";
+import { formatFileSize } from "../utils/attachmentValidation";
 
 const statuses = [
   { id: 1, name: "Open" },
@@ -31,19 +37,30 @@ const activityLabels = {
   StatusChanged: "Status changed",
   CommentAdded: "Public comment added",
   InternalNoteAdded: "Internal note added",
+  AttachmentUploaded: "Attachment uploaded",
+  AttachmentDeleted: "Attachment deleted",
 };
+
+function getAttachmentErrorMessage(error, fallbackMessage) {
+  if (error.response?.status === 401) return "Your session has expired. Please sign in again.";
+  if (error.response?.status === 403) return "You do not have permission to access attachments for this ticket.";
+  if (error.response?.status === 404) return "The ticket or attachment could not be found.";
+  return getApiErrorMessage(error, fallbackMessage);
+}
 
 function TicketDetails() {
   const { id } = useParams();
   const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const roles = user?.roles || [];
-  const canManageWorkflow = roles.some((role) => ["Admin", "ITSupportAgent", "Manager"].includes(role));
+  const role = getPrimaryRole(user);
+  const canAssignTicket = role === "Admin" || role === "Manager";
+  const canManageWorkflow = canAssignTicket || role === "ITSupportAgent";
 
   const [ticket, setTicket] = useState(null);
   const [comments, setComments] = useState([]);
   const [activity, setActivity] = useState([]);
+  const [attachments, setAttachments] = useState([]);
   const [agents, setAgents] = useState([]);
   const [assignedToUserId, setAssignedToUserId] = useState("");
   const [ticketStatusId, setTicketStatusId] = useState("");
@@ -52,7 +69,10 @@ function TicketDetails() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [error, setError] = useState("");
+  const [downloadingAttachmentId, setDownloadingAttachmentId] = useState(null);
+  const [attachmentsLoading, setAttachmentsLoading] = useState(true);
+  const [attachmentError, setAttachmentError] = useState("");
+  const [error, setError] = useState(location.state?.error || "");
   const [success, setSuccess] = useState(location.state?.message || "");
 
   const loadTicketData = useCallback(async () => {
@@ -74,12 +94,16 @@ function TicketDetails() {
 
     async function loadPage() {
       try {
-        const agentsPromise = canManageWorkflow ? getAgents() : Promise.resolve([]);
-        const [ticketData, commentData, activityData, agentData] = await Promise.all([
+        const agentsPromise = canAssignTicket ? getAgents() : Promise.resolve([]);
+        const attachmentPromise = getTicketAttachments(id)
+          .then((data) => ({ data, error: null }))
+          .catch((attachmentRequestError) => ({ data: [], error: attachmentRequestError }));
+        const [ticketData, commentData, activityData, agentData, attachmentResult] = await Promise.all([
           getTicketById(id),
           getTicketComments(id),
           getTicketActivity(id),
           agentsPromise,
+          attachmentPromise,
         ]);
 
         if (!ignore) {
@@ -87,12 +111,18 @@ function TicketDetails() {
           setComments(commentData);
           setActivity(activityData);
           setAgents(agentData);
+          setAttachments(attachmentResult.data);
+          if (attachmentResult.error) {
+            setAttachmentError(getAttachmentErrorMessage(attachmentResult.error, "Attachments could not be loaded."));
+          }
+          setAttachmentsLoading(false);
           setAssignedToUserId(ticketData.assignedToUserId || "");
           setTicketStatusId(String(ticketData.ticketStatusId));
         }
       } catch (requestError) {
         if (!ignore) {
           setError(getApiErrorMessage(requestError, "The ticket could not be loaded."));
+          setAttachmentsLoading(false);
         }
       } finally {
         if (!ignore) {
@@ -105,7 +135,28 @@ function TicketDetails() {
     return () => {
       ignore = true;
     };
-  }, [canManageWorkflow, id]);
+  }, [canAssignTicket, id]);
+
+  async function handleAttachmentDownload(attachment) {
+    setAttachmentError("");
+    setDownloadingAttachmentId(attachment.id);
+
+    try {
+      const blob = await downloadTicketAttachment(id, attachment.id);
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = attachment.fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(objectUrl);
+    } catch (requestError) {
+      setAttachmentError(getAttachmentErrorMessage(requestError, "The attachment could not be downloaded."));
+    } finally {
+      setDownloadingAttachmentId(null);
+    }
+  }
 
   async function runWorkflowAction(action, message) {
     setError("");
@@ -230,7 +281,7 @@ function TicketDetails() {
               </dl>
             </div>
 
-            <footer className="ticket-details-actions">
+            {canManageWorkflow && <footer className="ticket-details-actions">
               <Link className="dashboard-button dashboard-button-secondary" to={`/tickets/${ticket.id}/edit`}>
                 <TicketIcon name="edit" />
                 Edit Ticket
@@ -239,13 +290,13 @@ function TicketDetails() {
                 <TicketIcon name="trash" />
                 {isDeleting ? "Deleting..." : "Delete Ticket"}
               </button>
-            </footer>
+            </footer>}
           </section>
 
           {canManageWorkflow && (
             <section className="card ticket-workflow-card">
-              <header><h2>Workflow controls</h2><p>Assign ownership and move the ticket through its lifecycle.</p></header>
-              <form className="ticket-workflow-form" onSubmit={handleAssignment}>
+              <header><h2>Workflow controls</h2><p>{canAssignTicket ? "Assign ownership and move the ticket through its lifecycle." : "Update the status of this assigned ticket."}</p></header>
+              {canAssignTicket && <form className="ticket-workflow-form" onSubmit={handleAssignment}>
                 <label>
                   <span>Assigned support agent</span>
                   <select value={assignedToUserId} onChange={(event) => setAssignedToUserId(event.target.value)}>
@@ -254,7 +305,7 @@ function TicketDetails() {
                   </select>
                 </label>
                 <button className="dashboard-button dashboard-button-primary" disabled={isSaving} type="submit">Update assignment</button>
-              </form>
+              </form>}
               <form className="ticket-workflow-form" onSubmit={handleStatusUpdate}>
                 <label>
                   <span>Ticket status</span>
@@ -266,6 +317,34 @@ function TicketDetails() {
               </form>
             </section>
           )}
+
+          <section className="card ticket-attachments-card">
+            <header>
+              <div><h2>Attachments</h2><p>Files shared with this support request.</p></div>
+              <span className="panel-badge">{attachments.length}</span>
+            </header>
+
+            {attachmentError && <div className="ticket-alert ticket-alert-error" role="alert">{attachmentError}</div>}
+
+            <div className="ticket-attachment-list">
+              {attachmentsLoading ? <p className="ticket-empty-copy">Loading attachments…</p> : attachments.length === 0 ? <p className="ticket-empty-copy">No attachments have been uploaded.</p> : attachments.map((attachment) => (
+                <article className="ticket-attachment-item" key={attachment.id}>
+                  <span className="ticket-attachment-icon"><TicketIcon name="file" /></span>
+                  <div className="ticket-attachment-details">
+                    <strong title={attachment.fileName}>{attachment.fileName}</strong>
+                    <span>{attachment.contentType} · {formatFileSize(attachment.fileSize)}</span>
+                    <small>Uploaded by {attachment.uploadedBy} · {formatTicketDate(attachment.uploadedAt)}</small>
+                  </div>
+                  <div className="ticket-attachment-actions">
+                    <button className="ticket-action-button" type="button" disabled={downloadingAttachmentId === attachment.id} onClick={() => handleAttachmentDownload(attachment)}>
+                      <TicketIcon name="download" />
+                      {downloadingAttachmentId === attachment.id ? "Downloading..." : "Download"}
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
 
           <section className="card ticket-conversation-card">
             <header><h2>Comments and replies</h2><p>Public updates are visible to the requester. Internal notes stay with the service team.</p></header>

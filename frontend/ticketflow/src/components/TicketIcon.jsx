@@ -10,6 +10,17 @@ function TicketIcon({ name, size = 18 }) {
     edit: <><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z" /></>,
     trash: <><path d="M3 6h18M8 6V4h8v2m3 0-1 15H6L5 6m5 4v7m4-7v7" /></>,
     eye: <><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" /><circle cx="12" cy="12" r="2.5" /></>,
+    alarm: <><circle cx="12" cy="13" r="7" /><path d="M12 9v4l3 2M5 4 2 7m17-3 3 3" /></>,
+    refresh: <><path d="M20 11a8 8 0 0 0-15-3m-1-4v4h4m-4 5a8 8 0 0 0 15 3m1 4v-4h-4" /></>,
+    calendar: <><rect x="3" y="4" width="18" height="17" rx="2" /><path d="M8 2v4m8-4v4M3 10h18" /></>,
+    check: <path d="m5 12 4 4L19 6" />,
+    shield: <><path d="M12 22s8-3 8-10V5l-8-3-8 3v7c0 7 8 10 8 10Z" /><path d="m9 12 2 2 4-4" /></>,
+    arrowUp: <><path d="M12 19V5M5 12l7-7 7 7" /></>,
+    userOff: <><path d="m3 3 18 18M10 6a4 4 0 0 1 6 3m-2 5a7 7 0 0 1 6 7M4 21a8 8 0 0 1 9-7" /></>,
+    user: <><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></>,
+    attachment: <><path d="m21.4 11.6-8.9 8.9a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 1 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5" /></>,
+    download: <><path d="M12 3v12m-4-4 4 4 4-4M5 19h14" /></>,
+    file: <><path d="M6 2h8l4 4v16H6Z" /><path d="M14 2v5h5" /></>,
   };
 
   return (
