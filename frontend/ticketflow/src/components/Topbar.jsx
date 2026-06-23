@@ -1,4 +1,6 @@
+import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import { useNotifications } from "../notifications/useNotifications";
 import TicketIcon from "./TicketIcon";
 
 const roleAliases = {
@@ -11,6 +13,7 @@ const roleAliases = {
 
 function Topbar() {
   const { user } = useAuth();
+  const { unreadCount } = useNotifications();
   const role = roleAliases[String(user?.roles?.[0] || "Employee").toLowerCase()] || user?.roles?.[0] || "Employee";
   const initials = user?.fullName
     ?.split(" ")
@@ -29,10 +32,10 @@ function Topbar() {
         <button className="icon-button" type="button" aria-label="Help">
           <TicketIcon name="help" />
         </button>
-        <button className="icon-button icon-button-notify" type="button" aria-label="Notifications">
+        <Link className="icon-button icon-button-notify" to="/notifications" aria-label={`Notifications${unreadCount ? ` (${unreadCount} unread)` : ""}`}>
           <TicketIcon name="bell" />
-          <span className="notify-badge">3</span>
-        </button>
+          {unreadCount > 0 && <span className="notify-badge">{unreadCount > 99 ? "99+" : unreadCount}</span>}
+        </Link>
         <span className="topbar-divider" />
         <div className="user-pill">
           <div>

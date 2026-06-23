@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import AppLayout from "../components/AppLayout";
 import TicketIcon from "../components/TicketIcon";
 import { useAuth } from "../auth/AuthContext";
+import { getPrimaryRole } from "../auth/roles";
 import { deleteTicket, getTickets } from "../services/ticketService";
 import { getApiErrorMessage } from "../utils/apiError";
 import { formatTicketDate, toBadgeClass } from "../utils/ticketFormatting";
@@ -13,9 +14,11 @@ function Tickets() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [deletingId, setDeletingId] = useState(null);
-  const roles = user?.roles || [];
-  const canManageWorkflow = roles.some((role) => ["Admin", "ITSupportAgent", "Manager"].includes(role));
-  const isEmployee = roles.includes("Employee") && !canManageWorkflow;
+  const role = getPrimaryRole(user);
+  const canManageWorkflow = ["Admin", "ITSupportAgent", "Manager"].includes(role);
+  const isEmployee = role === "Employee";
+  const isAgent = role === "ITSupportAgent";
+  const canCreateTicket = role === "Admin" || isEmployee;
 
   useEffect(() => {
     let ignore = false;
@@ -73,10 +76,10 @@ function Tickets() {
           <h1>Tickets</h1>
           <p>Review, update, and manage support requests.</p>
         </div>
-        <Link className="dashboard-button dashboard-button-primary" to="/tickets/create">
+        {canCreateTicket && <Link className="dashboard-button dashboard-button-primary" to="/tickets/create">
           <TicketIcon name="plus" />
           Create Ticket
-        </Link>
+        </Link>}
       </section>
 
       {error && <div className="ticket-alert ticket-alert-error" role="alert">{error}</div>}
@@ -84,7 +87,7 @@ function Tickets() {
       <section className="card workload-panel ticket-list-card">
         <div className="workload-header">
           <div>
-            <h2>{isEmployee ? "My Tickets" : "All Tickets"}</h2>
+            <h2>{isEmployee ? "My Tickets" : isAgent ? "My Assigned Tickets" : "All Tickets"}</h2>
             <span className="panel-subtitle">
               {isLoading ? "Loading ticket queue..." : `${tickets.length} ticket${tickets.length === 1 ? "" : "s"}`}
             </span>
@@ -101,10 +104,10 @@ function Tickets() {
           <div className="ticket-state">
             <span className="ticket-state-icon"><TicketIcon name="ticket" size={24} /></span>
             <strong>No tickets yet</strong>
-            <p>Create the first support request to get started.</p>
-            <Link className="dashboard-button dashboard-button-primary" to="/tickets/create">
+            <p>{isAgent ? "No tickets are currently assigned to you." : isEmployee ? "Create your first support request to get started." : "No tickets are available."}</p>
+            {canCreateTicket && <Link className="dashboard-button dashboard-button-primary" to="/tickets/create">
               Create Ticket
-            </Link>
+            </Link>}
           </div>
         ) : (
           <div className="table-scroll">
@@ -146,12 +149,12 @@ function Tickets() {
                         <Link className="ticket-action-button" to={`/tickets/${ticket.id}`} title="View ticket">
                           <TicketIcon name="eye" size={16} /><span>View</span>
                         </Link>
-                        {(canManageWorkflow || isEmployee) && (
+                        {canManageWorkflow && (
                           <Link className="ticket-action-button" to={`/tickets/${ticket.id}/edit`} title="Edit ticket">
                             <TicketIcon name="edit" size={16} /><span>Edit</span>
                           </Link>
                         )}
-                        {(canManageWorkflow || isEmployee) && (
+                        {canManageWorkflow && (
                           <button
                             className="ticket-action-button ticket-action-danger"
                             type="button"

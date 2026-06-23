@@ -1,5 +1,6 @@
 using TicketFlow.API.Data;
 using TicketFlow.API.Helpers;
+using TicketFlow.API.Hubs;
 using TicketFlow.API.Models;
 using TicketFlow.API.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -12,6 +13,7 @@ using System.Text;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
+builder.Services.AddSignalR();
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -34,6 +36,7 @@ builder.Services.Configure<DataProtectionTokenProviderOptions>(options =>
 
 builder.Services.AddScoped<JwtService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
 
 builder.Services.AddCors(options =>
 {
@@ -41,7 +44,8 @@ builder.Services.AddCors(options =>
     {
         policy.WithOrigins("http://localhost:5173", "http://localhost:5174")
               .AllowAnyHeader()
-              .AllowAnyMethod();
+              .AllowAnyMethod()
+              .AllowCredentials();
     });
 });
 
@@ -64,7 +68,26 @@ builder.Services.AddAuthentication(options =>
         ValidateIssuerSigningKey = true,
         ValidIssuer = issuer,
         ValidAudience = audience,
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey!))
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey!)),
+        NameClaimType = System.Security.Claims.ClaimTypes.Name,
+        RoleClaimType = System.Security.Claims.ClaimTypes.Role
+    };
+
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.HttpContext.Request.Path;
+
+            if (!string.IsNullOrEmpty(accessToken)
+                && path.StartsWithSegments("/hubs/notifications"))
+            {
+                context.Token = accessToken;
+            }
+
+            return Task.CompletedTask;
+        }
     };
 });
 
@@ -105,6 +128,7 @@ var app = builder.Build();
 
 await ApplyMigrationsAsync(app);
 await SeedRolesAsync(app);
+await SeedPhase5RoleAccountsAsync(app);
 await SeedAdminUserAsync(app);
 await SeedTestUserAsync(app);
 
@@ -122,6 +146,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<NotificationHub>("/hubs/notifications");
 
 app.Run();
 
@@ -177,6 +202,73 @@ static async Task SeedTestUserAsync(WebApplication app)
         
         await userManager.CreateAsync(user, "TestPassword123!");
         await userManager.AddToRoleAsync(user, RoleNames.Employee);
+    }
+}
+
+static async Task SeedPhase5RoleAccountsAsync(WebApplication app)
+{
+    using var scope = app.Services.CreateScope();
+    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+
+    var accounts = new[]
+    {
+        new { Email = "admin@ticketflow.com", FullName = "TicketFlow Admin", Role = RoleNames.Admin },
+        new { Email = "itsupportagent@ticketflow.com", FullName = "TicketFlow IT Support Agent", Role = RoleNames.ITSupportAgent },
+        new { Email = "employee@ticketflow.com", FullName = "TicketFlow Employee", Role = RoleNames.Employee },
+        new { Email = "manager@ticketflow.com", FullName = "TicketFlow Manager", Role = RoleNames.Manager }
+    };
+
+    foreach (var account in accounts)
+    {
+        var user = await userManager.FindByEmailAsync(account.Email);
+
+        if (user == null)
+        {
+            user = new ApplicationUser
+            {
+                FullName = account.FullName,
+                UserName = account.Email,
+                Email = account.Email,
+                EmailConfirmed = true
+            };
+
+            var createResult = await userManager.CreateAsync(user, "Password123.");
+
+            if (!createResult.Succeeded)
+            {
+                throw new InvalidOperationException(
+                    $"Could not seed {account.Email}: {string.Join(", ", createResult.Errors.Select(error => error.Description))}");
+            }
+        }
+        else
+        {
+            user.FullName = account.FullName;
+            user.UserName = account.Email;
+            user.EmailConfirmed = true;
+
+            var updateResult = await userManager.UpdateAsync(user);
+            var resetToken = await userManager.GeneratePasswordResetTokenAsync(user);
+            var resetResult = await userManager.ResetPasswordAsync(user, resetToken, "Password123.");
+
+            if (!updateResult.Succeeded || !resetResult.Succeeded)
+            {
+                var errors = updateResult.Errors.Concat(resetResult.Errors).Select(error => error.Description);
+                throw new InvalidOperationException($"Could not update {account.Email}: {string.Join(", ", errors)}");
+            }
+        }
+
+        var currentRoles = await userManager.GetRolesAsync(user);
+        var rolesToRemove = currentRoles.Where(role => role != account.Role).ToArray();
+
+        if (rolesToRemove.Length > 0)
+        {
+            await userManager.RemoveFromRolesAsync(user, rolesToRemove);
+        }
+
+        if (!await userManager.IsInRoleAsync(user, account.Role))
+        {
+            await userManager.AddToRoleAsync(user, account.Role);
+        }
     }
 }
 

@@ -17,6 +17,8 @@
         public DbSet<TicketStatus> TicketStatuses { get; set; }
         public DbSet<TicketComment> TicketComments { get; set; }
         public DbSet<ActivityLog> ActivityLogs { get; set; }
+        public DbSet<TicketAttachment> TicketAttachments { get; set; }
+        public DbSet<Notification> Notifications { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -99,5 +101,43 @@
                 .WithMany()
                 .HasForeignKey(a => a.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<TicketAttachment>(entity =>
+            {
+                entity.Property(a => a.OriginalFileName).HasMaxLength(255);
+                entity.Property(a => a.StoredFileName).HasMaxLength(100);
+                entity.Property(a => a.FilePath).HasMaxLength(500);
+                entity.Property(a => a.ContentType).HasMaxLength(150);
+
+                entity.HasOne(a => a.Ticket)
+                    .WithMany(t => t.Attachments)
+                    .HasForeignKey(a => a.TicketId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(a => a.UploadedByUser)
+                    .WithMany()
+                    .HasForeignKey(a => a.UploadedByUserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<Notification>(entity =>
+            {
+                entity.Property(notification => notification.Title).HasMaxLength(200);
+                entity.Property(notification => notification.Message).HasMaxLength(1000);
+                entity.Property(notification => notification.Type).HasMaxLength(100);
+
+                entity.HasIndex(notification => new { notification.UserId, notification.CreatedAt });
+                entity.HasIndex(notification => new { notification.UserId, notification.IsRead });
+
+                entity.HasOne(notification => notification.User)
+                    .WithMany()
+                    .HasForeignKey(notification => notification.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(notification => notification.Ticket)
+                    .WithMany()
+                    .HasForeignKey(notification => notification.TicketId)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
         }
     }

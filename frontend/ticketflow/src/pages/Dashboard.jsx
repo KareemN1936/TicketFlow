@@ -1,225 +1,271 @@
-import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Legend,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+import AppLayout from "../components/AppLayout";
+import TicketIcon from "../components/TicketIcon";
 import { useAuth } from "../auth/AuthContext";
-import iconLogo from "../assets/Logo Icon only.png";
-import { dashboardDataByRole, quickActionsByRole } from "../data/mockDashboardData";
+import { getPrimaryRole } from "../auth/roles";
+import { dashboardService } from "../services/dashboardService";
+import { getApiErrorMessage } from "../utils/apiError";
 import "../App.css";
 
-const chartData = [
-  { label: "Mon", open: 48, progress: 30, resolved: 21 },
-  { label: "Tue", open: 62, progress: 38, resolved: 34 },
-  { label: "Wed", open: 55, progress: 34, resolved: 42 },
-  { label: "Thu", open: 71, progress: 46, resolved: 37 },
-  { label: "Fri", open: 68, progress: 42, resolved: 51 },
-  { label: "Sat", open: 37, progress: 24, resolved: 30 },
-  { label: "Sun", open: 42, progress: 27, resolved: 35 },
-];
+const chartColors = ["#3b82f6", "#6366f1", "#f97316", "#f59e0b", "#10b981", "#ef4444", "#64748b"];
 
-const navItemsByRole = {
-  Employee: [["dashboard", "Dashboard", "grid"], ["tickets", "My Tickets", "ticket"], ["create", "Create Ticket", "plus"], ["knowledge", "Knowledge Base", "book"], ["notifications", "Notifications", "bell", 3]],
-  ITSupportAgent: [["dashboard", "Dashboard", "grid"], ["assigned", "Assigned Tickets", "ticket"], ["tickets", "Tickets", "ticket"], ["knowledge", "Knowledge Base", "book"], ["notifications", "Notifications", "bell", 3]],
-  Manager: [["dashboard", "Dashboard", "grid"], ["tickets", "Tickets", "ticket"], ["reports", "Reports", "chart"], ["employees", "Employees / Team", "briefcase"], ["notifications", "Notifications", "bell", 3]],
-  Admin: [["dashboard", "Dashboard", "grid"], ["tickets", "Tickets", "ticket", 6], ["create", "Create Ticket", "plus"], ["knowledge", "Knowledge Base", "book"], ["reports", "Reports", "chart"], ["employees", "Employees / Users", "briefcase"], ["notifications", "Notifications", "bell", 3]],
+function ChartEmptyState() {
+  return <p className="dashboard-empty-copy dashboard-chart-empty">Nothing to chart in this scope.</p>;
+}
+
+function KpiGrid({ summary, role }) {
+  const totalLabel = role === "Employee" ? "My Total Tickets" : role === "ITSupportAgent" ? "My Assigned Tickets" : "Total Tickets";
+  const prefix = role === "Employee" ? "My " : role === "ITSupportAgent" ? "Assigned " : "";
+  const metrics = [
+    [totalLabel, role === "ITSupportAgent" ? summary.myAssignedTickets : summary.totalTickets, "ticket", "blue"],
+    [`${prefix}Open`, summary.openTickets, "alarm", "orange"],
+    [`${prefix}In Progress`, summary.inProgressTickets, "refresh", "amber"],
+    [`${prefix}Pending`, summary.pendingTickets, "calendar", "slate"],
+    [`${prefix}Resolved`, summary.resolvedTickets, "check", "green"],
+    [`${prefix}Closed`, summary.closedTickets, "shield", "green"],
+    ["High Priority", summary.highPriorityTickets, "arrowUp", "orange"],
+    ["Critical Priority", summary.criticalPriorityTickets, "alarm", "red"],
+  ];
+
+  if (role === "Admin") metrics.push(["Unassigned", summary.unassignedTickets, "userOff", "slate"]);
+  const visibleMetrics = role === "Employee"
+    ? metrics.filter(([label, value]) => !label.includes("Priority") || value > 0)
+    : metrics;
+
+  return (
+    <section className="stats-grid dashboard-kpi-grid" aria-label="Ticket overview">
+      {visibleMetrics.map(([label, value, icon, tone]) => (
+        <article className="card stat-card" key={label}>
+          <div className="stat-card-top">
+            <span className={`stat-icon stat-icon-${tone}`}><TicketIcon name={icon} /></span>
+          </div>
+          <div className="stat-card-body"><p>{label}</p><strong>{value}</strong></div>
+          <div className={`stat-card-footer stat-footer-${tone}`} />
+        </article>
+      ))}
+    </section>
+  );
+}
+
+const quickActions = {
+  Admin: [["Manage Users", "/admin", "user"], ["View Tickets", "/tickets", "ticket"], ["Notifications", "/notifications", "bell"]],
+  Manager: [["View Tickets", "/tickets", "ticket"], ["Notifications", "/notifications", "bell"]],
+  Employee: [["Create Ticket", "/tickets/create", "plus"], ["My Tickets", "/tickets", "ticket"], ["Notifications", "/notifications", "bell"]],
+  ITSupportAgent: [["Assigned Tickets", "/tickets", "ticket"], ["Notifications", "/notifications", "bell"]],
 };
 
-const roleAliases = {
-  admin: "Admin",
-  manager: "Manager",
-  employee: "Employee",
-  agent: "ITSupportAgent",
-  "it support agent": "ITSupportAgent",
-  itsupportagent: "ITSupportAgent",
-};
-
-function normalizeRole(roles = []) {
-  const role = roles.find((item) => roleAliases[String(item).toLowerCase()]);
-  return roleAliases[String(role || "Employee").toLowerCase()] || "Employee";
+function QuickActions({ role }) {
+  return <section className="card dashboard-quick-actions"><div className="panel-header"><div><h2>Quick Actions</h2><span className="panel-subtitle">Common tasks for your role</span></div></div><div>{quickActions[role].map(([label, path, icon]) => <Link key={path} className="dashboard-button dashboard-button-secondary" to={path}><TicketIcon name={icon} />{label}</Link>)}</div></section>;
 }
 
-function Icon({ name, size = 18 }) {
-  const icons = {
-    grid: <><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /></>,
-    ticket: <><path d="M4 5h16v5a2 2 0 0 0 0 4v5H4v-5a2 2 0 0 0 0-4V5Z" /><path d="M13 8h-2m2 4h-2m2 4h-2" /></>,
-    book: <><path d="M5 4h14v16H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z" /><path d="M8 8h7m-7 4h7m-7 4h4" /></>,
-    chart: <><path d="M4 20V10m6 10V4m6 16v-7m4 7H2" /></>,
-    briefcase: <><rect x="3" y="6" width="18" height="14" rx="2" /><path d="M8 6V4h8v2m-13 6h18m-10 0v2h2v-2" /></>,
-    bell: <><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9m-8 13h4" /></>,
-    gear: <><circle cx="12" cy="12" r="3" /><path d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.4-2.4 1A7 7 0 0 0 14.8 6L14.5 3h-5L9.2 6a7 7 0 0 0-1.7 1L5.1 6.1l-2 3.4 2 1.5A7 7 0 0 0 5 12c0 .3 0 .7.1 1l-2 1.5 2 3.4 2.4-1a7 7 0 0 0 1.7 1l.3 3h5l.3-3a7 7 0 0 0 1.7-1l2.4 1 2-3.4-2-1.5c.1-.3.1-.7.1-1Z" /></>,
-    user: <><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></>,
-    search: <><circle cx="11" cy="11" r="6" /><path d="m16 16 4 4" /></>,
-    help: <><circle cx="12" cy="12" r="9" /><path d="M9.5 9a2.5 2.5 0 1 1 4.8 1c-.7.9-2.3 1.2-2.3 3m0 3h.01" /></>,
-    apps: <><circle cx="5" cy="5" r="1" /><circle cx="12" cy="5" r="1" /><circle cx="19" cy="5" r="1" /><circle cx="5" cy="12" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /><circle cx="5" cy="19" r="1" /><circle cx="12" cy="19" r="1" /><circle cx="19" cy="19" r="1" /></>,
-    calendar: <><rect x="3" y="4" width="18" height="17" rx="2" /><path d="M8 2v4m8-4v4M3 10h18" /></>,
-    download: <><path d="M12 3v12m-4-4 4 4 4-4M5 19h14" /></>,
-    alarm: <><circle cx="12" cy="13" r="7" /><path d="M12 9v4l3 2M5 4 2 7m17-3 3 3" /></>,
-    userOff: <><path d="m3 3 18 18M10 6a4 4 0 0 1 6 3m-2 5a7 7 0 0 1 6 7M4 21a8 8 0 0 1 9-7" /></>,
-    speed: <><path d="M5 19a9 9 0 1 1 14 0M12 13l4-4" /><circle cx="12" cy="13" r="1" /></>,
-    filter: <><path d="M4 6h16M7 12h10m-7 6h4" /></>,
-    logout: <><path d="M10 17l5-5-5-5m5 5H3m12-9h5v18h-5" /></>,
-    plus: <><path d="M12 5v14m-7-7h14" /></>,
-    close: <><path d="M18 6 6 18M6 6l12 12" /></>,
-    arrowUp: <><path d="M12 5v14M5 12l7-7 7 7" /></>,
-    arrowDown: <><path d="M12 19V5M5 12l7 7 7-7" /></>,
-    refresh: <><path d="M20 11a8 8 0 0 0-15-3m-1-4v4h4m-4 5a8 8 0 0 0 15 3m1 4v-4h-4" /></>,
-    comment: <><path d="M20 15a3 3 0 0 1-3 3H8l-4 3v-3a3 3 0 0 1-1-2V7a3 3 0 0 1 3-3h11a3 3 0 0 1 3 3Z" /></>,
-    check: <><path d="m5 12 4 4L19 6" /></>,
-    users: <><path d="M16 21a6 6 0 0 0-12 0m6-9a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm7-1a3 3 0 0 0 0-6m4 16a5 5 0 0 0-4-5" /></>,
-    shield: <><path d="M12 22s8-3 8-10V5l-8-3-8 3v7c0 7 8 10 8 10Z" /><path d="m9 12 2 2 4-4" /></>,
-    tag: <><path d="m20 13-7 7-9-9V4h7l9 9Z" /><circle cx="8" cy="8" r="1" /></>,
-    chevronRight: <><path d="m9 18 6-6-6-6" /></>,
-  };
-
-  return <svg className="ui-icon" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{icons[name]}</svg>;
+function ScopeEmptyState({ role }) {
+  const content = {
+    Admin: ["No tickets have been created yet.", "Ticket analytics will appear after the first support request.", "/tickets", "View Tickets"],
+    Manager: ["No ticket activity is available yet.", "Team reporting will appear when tickets are created.", "/tickets", "View Tickets"],
+    Employee: ["You have not created any support tickets yet.", "Create a ticket when you need help from the IT team.", "/tickets/create", "Create Ticket"],
+    ITSupportAgent: ["No tickets are currently assigned to you.", "Your workload will appear here when a ticket is assigned.", "/tickets", "View Tickets"],
+  }[role];
+  return <section className="card dashboard-state dashboard-scope-empty"><TicketIcon name="ticket" size={34} /><h2>{content[0]}</h2><p>{content[1]}</p><Link className="dashboard-button dashboard-button-primary" to={content[2]}>{content[3]}</Link></section>;
 }
 
-function KpiGrid({ metrics }) {
-  return <section className="stats-grid" aria-label="Ticket overview">{metrics.map(([label, value, icon, iconTone, change, changeTone]) => (
-    <article className="card stat-card" key={label}>
-      <div className="stat-card-top"><span className={`stat-icon stat-icon-${iconTone}`}><Icon name={icon} size={18} /></span><span className={`stat-badge stat-badge-${changeTone}`}><Icon name={changeTone === "green" ? "arrowDown" : "arrowUp"} size={10} />{change}</span></div>
-      <div className="stat-card-body"><p>{label}</p><strong>{value}</strong></div>
-      <div className={`stat-card-footer stat-footer-${iconTone}`} />
-    </article>
-  ))}</section>;
+function StandardTooltip({ active, payload, label }) {
+  if (!active || !payload?.length) return null;
+
+  return (
+    <div className="dashboard-chart-tooltip">
+      <strong>{label || payload[0]?.name}</strong>
+      {payload.map((item) => <span key={item.dataKey || item.name}>{item.name}: {item.value}</span>)}
+    </div>
+  );
 }
 
-function QuickActions({ activeRole, onCreateTicket }) {
-  return <section className="card dashboard-panel quick-actions-panel">
-    <div className="panel-header"><div><h2>Quick Actions</h2><span className="panel-subtitle">{activeRole} workspace</span></div></div>
-    <div className="quick-actions-grid">{quickActionsByRole[activeRole].map(([label, icon]) => (
-      <button className="quick-action" type="button" key={label} onClick={label === "Create Ticket" ? onCreateTicket : undefined}><span><Icon name={icon} size={16} /></span>{label}</button>
-    ))}</div>
-  </section>;
+function BarAnalyticsChart({ title, subtitle, data, color = "#3b82f6", horizontal = false }) {
+  return (
+    <section className="card dashboard-panel analytics-panel dashboard-chart-panel">
+      <div className="panel-header"><div><h2>{title}</h2><span className="panel-subtitle">{subtitle}</span></div></div>
+      <div className={`recharts-wrap${horizontal ? " recharts-wrap-tall" : ""}`}>
+        {!data.length ? <ChartEmptyState /> : (
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={data} layout={horizontal ? "vertical" : "horizontal"} margin={{ top: 10, right: 14, left: horizontal ? 20 : 0, bottom: 8 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              {horizontal ? <><XAxis type="number" allowDecimals={false} /><YAxis dataKey="name" type="category" width={90} /></> : <><XAxis dataKey="name" interval={0} angle={data.length > 5 ? -25 : 0} textAnchor={data.length > 5 ? "end" : "middle"} height={data.length > 5 ? 65 : 35} /><YAxis allowDecimals={false} /></>}
+              <Tooltip content={<StandardTooltip />} />
+              <Bar dataKey="count" name="Tickets" fill={color} radius={horizontal ? [0, 5, 5, 0] : [5, 5, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        )}
+      </div>
+    </section>
+  );
 }
 
-function DistributionPanel({ title, subtitle, items }) {
-  return <section className="card dashboard-panel distribution-panel">
-    <div className="panel-header"><div><h2>{title}</h2><span className="panel-subtitle">{subtitle}</span></div></div>
-    <div className="distribution-list">{items.map((item) => <div className="distribution-item" key={item.label}>
-      <div className="distribution-label"><span><i className={`dot ${item.tone}`} />{item.label}</span><strong>{item.count}</strong></div>
-      <div className="distribution-track"><span className={`distribution-fill ${item.tone}`} style={{ width: `${item.percentage}%` }} /></div><small>{item.percentage}%</small>
-    </div>)}</div>
-  </section>;
+function PriorityChart({ data }) {
+  const total = data.reduce((sum, item) => sum + item.count, 0);
+
+  return (
+    <section className="card dashboard-panel analytics-panel dashboard-chart-panel">
+      <div className="panel-header"><div><h2>Tickets by Priority</h2><span className="panel-subtitle">Priority mix for tickets in your scope</span></div></div>
+      <div className="recharts-wrap">
+        {!data.length ? <ChartEmptyState /> : (
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie data={data} dataKey="count" nameKey="name" cx="50%" cy="45%" innerRadius={52} outerRadius={82} paddingAngle={2}>
+                {data.map((item, index) => <Cell key={item.name} fill={chartColors[index % chartColors.length]} />)}
+              </Pie>
+              <Tooltip content={<StandardTooltip />} />
+              <Legend verticalAlign="bottom" />
+              <text x="50%" y="43%" textAnchor="middle" className="chart-total-value">{total}</text>
+              <text x="50%" y="51%" textAnchor="middle" className="chart-total-label">tickets</text>
+            </PieChart>
+          </ResponsiveContainer>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function AgentPerformanceChart({ data }) {
+  return (
+    <section className="card dashboard-panel analytics-panel dashboard-chart-panel dashboard-chart-wide">
+      <div className="panel-header"><div><h2>Agent Performance</h2><span className="panel-subtitle">Assigned, open, and resolved ticket workload by agent</span></div></div>
+      <div className="recharts-wrap recharts-wrap-tall">
+        {!data.length ? <ChartEmptyState /> : (
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={data} margin={{ top: 10, right: 14, left: 0, bottom: 45 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <XAxis dataKey="agentName" interval={0} angle={-20} textAnchor="end" height={75} />
+              <YAxis allowDecimals={false} />
+              <Tooltip content={<StandardTooltip />} />
+              <Legend />
+              <Bar dataKey="assignedTickets" name="Assigned" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="openTickets" name="Open" fill="#f97316" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="resolvedTickets" name="Resolved" fill="#10b981" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function formatActivityTime(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Unknown time";
+  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(date);
 }
 
 function ActivityPanel({ activities, title = "Recent Activity" }) {
-  return <section className="card dashboard-panel activity-panel">
-    <div className="panel-header"><h2>{title}</h2><span className="panel-badge">{activities.length} new</span></div>
-    <div className="activity-list">{activities.length ? activities.map((activity, index) => <article className={`activity-item ${index === 0 ? "latest" : ""}`} key={activity.id}>
-      <div className="activity-dot-line"><i className={`dot ${activity.tone}`} />{index < activities.length - 1 && <span className="activity-line" />}</div>
-      <div className="activity-content"><p>{activity.title}</p><span className="activity-meta"><span className="activity-time">{activity.meta}</span><span className="activity-author">{activity.author}</span></span></div>
-    </article>) : <p className="dashboard-empty-copy">No activity matches your search.</p>}</div>
-    <button className="text-button" type="button">View Notification Center <Icon name="chevronRight" size={12} /></button>
-  </section>;
-}
-
-function TrendChart() {
-  return <section className="card dashboard-panel analytics-panel">
-    <div className="panel-header"><div><h2>Resolution Trend</h2><span className="panel-subtitle">Weekly ticket volume and resolution progress</span></div><div className="chart-legend"><span><i className="dot blue" />Open</span><span><i className="dot orange" />In Progress</span><span><i className="dot slate" />Resolved</span></div></div>
-    <div className="chart-container"><div className="chart-grid">{[0, 25, 50, 75, 100].map((value) => <div key={value} className="chart-gridline" style={{ bottom: `${value}%` }}><span className="chart-gridlabel">{value}</span></div>)}</div>
-      <div className="chart-bars-group">{chartData.map((day) => <div className="chart-column" key={day.label}><div className="chart-bar-group"><span className="chart-bar chart-bar-open" style={{ height: `${day.open}%` }} /><span className="chart-bar chart-bar-progress" style={{ height: `${day.progress}%` }} /><span className="chart-bar chart-bar-resolved" style={{ height: `${day.resolved}%` }} /></div><span className="chart-label">{day.label}</span></div>)}</div>
-    </div>
-  </section>;
-}
-
-function SlaPanel({ items }) {
-  return <section className="card dashboard-panel urgency-panel">
-    <div className="panel-header"><div><h2>SLA &amp; Urgency</h2><span className="panel-subtitle">Tickets that need immediate attention</span></div></div>
-    <div className="urgency-grid">{items.map((risk) => <article className={`urgency-item urgency-${risk.tone}`} key={risk.label}><span>{risk.label}</span><strong>{risk.value}</strong><small>{risk.note}</small></article>)}</div>
-  </section>;
-}
-
-function RecentTicketsTable({ activeRole, tickets }) {
-  const isEmployee = activeRole === "Employee";
-  const isAgent = activeRole === "ITSupportAgent";
-  return <section className="card workload-panel recent-tickets-panel">
-    <div className="workload-header"><div><h2>{isEmployee ? "My Recent Tickets" : isAgent ? "My Assigned Tickets" : "Recent Tickets"}</h2><span className="panel-subtitle">{isEmployee ? "Your latest support requests" : isAgent ? "Tickets currently assigned to you" : "Latest incoming and updated service requests"}</span></div><button className="workload-sort" type="button">View All Tickets <Icon name="chevronRight" size={14} /></button></div>
-    <div className="table-scroll"><table className="workload-table recent-tickets-table"><thead><tr><th>Reference</th><th>Ticket</th>{!isEmployee && <th>Requester</th>}<th>Category</th><th>Priority</th><th>Status</th>{isAgent && <th>SLA Remaining</th>}{!isEmployee && !isAgent && <th>Assigned Agent</th>}<th>{isEmployee ? "Created Date" : "Created"}</th><th>Last Updated</th></tr></thead>
-      <tbody>{tickets.length ? tickets.map((ticket) => <tr key={ticket.reference}><td><strong className="ticket-reference">{ticket.reference}</strong></td><td><strong>{ticket.title}</strong></td>{!isEmployee && <td>{ticket.requester}</td>}<td>{ticket.category}</td><td><span className={`ticket-badge priority-${ticket.priority.toLowerCase()}`}>{ticket.priority}</span></td><td><span className={`ticket-badge ticket-status-${ticket.status.toLowerCase().replace(" ", "-")}`}>{ticket.status}</span></td>{isAgent && <td className={ticket.slaRemaining?.includes("m") ? "ticket-unassigned" : ""}>{ticket.slaRemaining}</td>}{!isEmployee && !isAgent && <td className={ticket.agent === "Unassigned" ? "ticket-unassigned" : ""}>{ticket.agent}</td>}<td>{ticket.createdAt}</td><td>{ticket.updatedAt}</td></tr>) : <tr><td colSpan="9" className="dashboard-empty-copy">No tickets match your search.</td></tr>}</tbody>
-    </table></div>
-  </section>;
-}
-
-function TechnicianWorkload({ technicians, title = "Technician Workload" }) {
-  return <section className="card workload-panel">
-    <div className="workload-header"><div><h2>{title}</h2><span className="panel-subtitle">Current capacity and ticket resolution performance</span></div><button className="workload-sort" type="button"><Icon name="filter" size={14} />Sort by Capacity</button></div>
-    <div className="table-scroll"><table className="workload-table"><thead><tr><th>Agent</th><th className="col-status">Status</th><th className="col-num">Active Tickets</th><th className="col-num">Resolved Today</th><th className="col-num">Avg. Time</th><th className="col-num">Capacity</th></tr></thead>
-      <tbody>{technicians.map((technician, index) => <tr key={technician.name} className={index % 2 === 0 ? "even" : "odd"}><td><div className="technician"><span className={`technician-avatar ${technician.tone}`}>{technician.initials}</span><div><strong>{technician.name}</strong><span>{technician.role}</span></div></div></td><td className="col-status"><span className={`status-badge ${technician.status.toLowerCase()}`}><span className="status-dot-indicator" />{technician.status}</span></td><td className="col-num">{String(technician.activeTickets).padStart(2, "0")}</td><td className="col-num">{String(technician.resolvedToday).padStart(2, "0")}</td><td className="col-num">{technician.avgTime}</td><td className="col-num"><div className="capacity-info"><div className={`capacity-track${technician.capacity > 85 ? " danger" : ""}`}><span style={{ width: `${technician.capacity}%` }} /></div><span className="capacity-value">{technician.capacity}%</span></div></td></tr>)}</tbody>
-    </table></div>
-  </section>;
-}
-
-function KnowledgeSuggestions({ articles }) {
-  return <section className="card dashboard-panel knowledge-panel"><div className="panel-header"><div><h2>Knowledge Base Suggestions</h2><span className="panel-subtitle">Before creating a ticket, check these articles</span></div></div><div className="knowledge-list">{articles.map(([title, meta]) => <button type="button" className="knowledge-item" key={title}><span><Icon name="book" size={15} /></span><strong>{title}</strong><small>{meta}</small><Icon name="chevronRight" size={14} /></button>)}</div></section>;
-}
-
-function AdminStats({ stats }) {
-  return <section className="card dashboard-panel admin-stats-panel"><div className="panel-header"><div><h2>User &amp; Assignment Overview</h2><span className="panel-subtitle">Current help desk coverage</span></div></div><div className="admin-stats-grid">{stats.map(([label, value]) => <article key={label}><strong>{value}</strong><span>{label}</span></article>)}</div></section>;
+  return (
+    <section className="card dashboard-panel activity-panel dashboard-activity-wide">
+      <div className="panel-header"><div><h2>{title}</h2><span className="panel-subtitle">Latest changes to tickets in your scope</span></div><span className="panel-badge">{activities.length}</span></div>
+      <div className="activity-list">
+        {activities.length ? activities.map((activity, index) => (
+          <article className={`activity-item${index === 0 ? " latest" : ""}`} key={activity.id}>
+            <div className="activity-dot-line"><i className="dot blue" />{index < activities.length - 1 && <span className="activity-line" />}</div>
+            <div className="activity-content">
+              <p>{activity.action}{activity.ticketReferenceNumber ? ` — ${activity.ticketReferenceNumber}` : ""}</p>
+              <span className="activity-meta"><span className="activity-time">{formatActivityTime(activity.createdAt)}</span><span className="activity-author">{activity.performedBy}</span></span>
+            </div>
+          </article>
+        )) : <p className="dashboard-empty-copy">No recent activity is available.</p>}
+      </div>
+    </section>
+  );
 }
 
 function Dashboard() {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
-  const [shouldAnimate] = useState(() => {
-    const hasAnimated = sessionStorage.getItem("ticketflow-dashboard-animated");
-
-    if (!hasAnimated) {
-      sessionStorage.setItem("ticketflow-dashboard-animated", "true");
-      return true;
-    }
-
-    return false;
-  });
-  const [query, setQuery] = useState("");
-  const activeRole = normalizeRole(user?.roles);
-  const dashboardData = dashboardDataByRole[activeRole];
-  const [activities] = useState(dashboardData.activities);
-  const normalizedQuery = query.trim().toLowerCase();
-  const isEmployee = activeRole === "Employee";
+  const { user } = useAuth();
+  const activeRole = getPrimaryRole(user);
+  const canViewAgentPerformance = activeRole === "Admin" || activeRole === "Manager";
   const isAgent = activeRole === "ITSupportAgent";
-  const isManager = activeRole === "Manager";
-  const isAdmin = activeRole === "Admin";
-  const canExportReport = isManager || isAdmin;
-  const canViewSystemAnalytics = isManager || isAdmin;
-  const canViewTechnicianWorkload = isManager || isAdmin;
-  const canManageUsers = isAdmin;
-  const initials = user?.fullName?.split(" ").map((name) => name[0]).join("").slice(0, 2).toUpperCase() || "IT";
+  const isEmployee = activeRole === "Employee";
+  const [dashboard, setDashboard] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [reloadKey, setReloadKey] = useState(0);
 
-  const visibleTickets = useMemo(() => dashboardData.tickets.filter((ticket) => Object.values(ticket).join(" ").toLowerCase().includes(normalizedQuery)), [dashboardData.tickets, normalizedQuery]);
-  const visibleActivities = useMemo(() => activities.filter((activity) => activity.title.toLowerCase().includes(normalizedQuery)), [activities, normalizedQuery]);
+  useEffect(() => {
+    const controller = new AbortController();
+    const requests = [
+      dashboardService.getSummary(controller.signal),
+      dashboardService.getTicketsByStatus(controller.signal),
+      dashboardService.getTicketsByPriority(controller.signal),
+      dashboardService.getTicketsByCategory(controller.signal),
+      dashboardService.getRecentActivity(controller.signal),
+    ];
 
-  function exportReport() {
-    const rows = [["Reference", "Title", "Category", "Priority", "Status", "Created"], ...dashboardData.tickets.map((ticket) => [ticket.reference, ticket.title, ticket.category, ticket.priority, ticket.status, ticket.createdAt])];
-    const csv = rows.map((row) => row.map((cell) => `"${cell ?? ""}"`).join(",")).join("\n");
-    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${activeRole.toLowerCase()}-ticketflow-report.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
+    if (canViewAgentPerformance) requests.push(dashboardService.getAgentPerformance(controller.signal));
+
+    Promise.all(requests)
+      .then(([summary, status, priority, category, activity, agentPerformance = []]) => {
+        const withData = (items) => items.filter((item) => Number(item.count) > 0);
+        if (!controller.signal.aborted) setDashboard({ summary, status: withData(status), priority: withData(priority), category: withData(category), activity, agentPerformance });
+      })
+      .catch((requestError) => {
+        if (!controller.signal.aborted) setError(getApiErrorMessage(requestError, "Dashboard analytics could not be loaded. Please try again."));
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [canViewAgentPerformance, reloadKey]);
+
+  function reloadDashboard() {
+    setLoading(true);
+    setError("");
+    setReloadKey((value) => value + 1);
   }
 
-  return <div className={`dashboard-shell${shouldAnimate ? "" : " dashboard-static"}`}>
-    <aside className="sidebar">
-      <div className="sidebar-brand"><span className="sidebar-logo"><img src={iconLogo} alt="" /></span><div><h2>TicketFl<span className="sidebar-brand-accent">o</span>w</h2><p>IT Service Management</p></div></div>
-      <nav className="sidebar-nav" aria-label="Primary navigation"><div className="sidebar-nav-primary">{navItemsByRole[activeRole].map(([id, label, icon, badge]) => <button className={`sidebar-link${id === "dashboard" ? " active" : ""}`} type="button" key={id} aria-current={id === "dashboard" ? "page" : undefined} onClick={id === "tickets" || id === "assigned" ? () => navigate("/tickets") : id === "create" ? () => navigate("/tickets/create") : undefined}><span className={`sidebar-link-icon${id === "dashboard" ? " active" : ""}`}><Icon name={icon} size={18} /></span><span className="sidebar-link-label">{label}</span>{badge > 0 && <span className="sidebar-link-badge">{badge}</span>}</button>)}</div>
-        <div className="sidebar-nav-secondary">{canManageUsers && <button className="sidebar-link" type="button"><span className="sidebar-link-icon"><Icon name="gear" size={18} /></span><span className="sidebar-link-label">Settings</span></button>}<button className="sidebar-link" type="button"><span className="sidebar-link-icon"><Icon name="user" size={18} /></span><span className="sidebar-link-label">Profile</span></button><div className="sidebar-divider" /><button className="sidebar-link sidebar-logout" type="button" onClick={logout}><span className="sidebar-link-icon"><Icon name="logout" size={18} /></span><span className="sidebar-link-label">Log out</span></button></div>
-      </nav>{(isEmployee || isAdmin) && <button className="sidebar-create-ticket" type="button" onClick={() => navigate("/tickets/create")}><Icon name="plus" size={18} />Create Ticket</button>}
-    </aside>
+  const heading = useMemo(() => {
+    if (isEmployee) return ["My Dashboard", "A live overview of your support requests and recent updates."];
+    if (isAgent) return ["Agent Dashboard", "Your assigned workload, ticket mix, and recent activity."];
+    if (activeRole === "Manager") return ["Team Reports Dashboard", "Monitor service desk activity, workload, and team performance."];
+    return ["Service Desk Dashboard", "Live system-wide ticket analytics and service desk performance."];
+  }, [activeRole, isAgent, isEmployee]);
 
-    <div className="dashboard-main"><header className="topbar"><label className="dashboard-search"><Icon name="search" size={16} /><span className="sr-only">Search dashboard</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={dashboardData.searchPlaceholder} />{query && <button className="search-clear" type="button" onClick={() => setQuery("")} aria-label="Clear search"><Icon name="close" size={14} /></button>}</label><div className="topbar-actions"><button className="icon-button" type="button" aria-label="Help"><Icon name="help" size={18} /></button><button className="icon-button" type="button" aria-label="Applications"><Icon name="apps" size={18} /></button><button className="icon-button icon-button-notify" type="button" aria-label="Notifications"><Icon name="bell" size={18} /><span className="notify-badge">3</span></button><span className="topbar-divider" /><div className="user-pill"><div><strong>{user?.fullName || "IT User"}</strong><span>{activeRole}</span></div><span className="avatar" aria-hidden="true">{initials}</span></div></div></header>
+  return (
+    <AppLayout>
+      <section className="dashboard-heading">
+        <div><p className="dashboard-welcome">Welcome back, {user?.fullName || "TicketFlow User"} <span>{activeRole}</span></p><h1>{heading[0]}</h1><p>{heading[1]}</p></div>
+        {!loading && <button className="dashboard-button dashboard-button-secondary" type="button" onClick={reloadDashboard}><TicketIcon name="refresh" />Refresh</button>}
+      </section>
 
-      <main className="dashboard-content"><section className="dashboard-heading"><div><p className="dashboard-welcome">Welcome back, {user?.fullName || "TicketFlow User"} <span>{activeRole}</span></p><h1>{dashboardData.title}</h1><p>{dashboardData.subtitle}</p></div><div className="heading-actions"><button className="dashboard-button dashboard-button-secondary" type="button"><Icon name="calendar" size={16} />Last 24 Hours</button>{canExportReport && <button className="dashboard-button dashboard-button-primary" type="button" onClick={exportReport}><Icon name="download" size={16} />Export Report</button>}</div></section>
-        <KpiGrid metrics={dashboardData.metrics} />
+      {loading && <section className="card dashboard-state" role="status"><span className="dashboard-spinner" /><h2>Loading dashboard analytics</h2><p>Fetching the latest ticket data…</p></section>}
 
-        {isEmployee && <><div className="dashboard-grid dashboard-grid-balanced"><QuickActions activeRole={activeRole} onCreateTicket={() => navigate("/tickets/create")} /><ActivityPanel activities={visibleActivities} title="My Notifications & Updates" /></div><RecentTicketsTable activeRole={activeRole} tickets={visibleTickets} /><KnowledgeSuggestions articles={dashboardData.knowledgeArticles} /></>}
+      {!loading && error && <section className="card dashboard-state dashboard-error" role="alert"><TicketIcon name="alarm" /><h2>Unable to load dashboard</h2><p>{error}</p><button className="dashboard-button dashboard-button-primary" type="button" onClick={reloadDashboard}>Try Again</button></section>}
 
-        {isAgent && <><div className="dashboard-grid dashboard-grid-balanced"><SlaPanel items={dashboardData.slaRisks} /><QuickActions activeRole={activeRole} onCreateTicket={() => navigate("/tickets/create")} /></div><RecentTicketsTable activeRole={activeRole} tickets={visibleTickets} /><div className="dashboard-grid dashboard-grid-balanced"><ActivityPanel activities={visibleActivities} title="Assigned Ticket Activity" /><TechnicianWorkload technicians={[dashboardData.workload]} title="My Workload & Capacity" /></div></>}
-
-        {canViewSystemAnalytics && <><div className="dashboard-grid dashboard-grid-balanced">{isAdmin ? <SlaPanel items={dashboardData.slaRisks} /> : <TrendChart />}<QuickActions activeRole={activeRole} onCreateTicket={() => navigate("/tickets/create")} /></div><div className="distribution-grid"><DistributionPanel title="Tickets by Status" subtitle="Current queue distribution" items={dashboardData.statusDistribution} /><DistributionPanel title="Tickets by Category" subtitle="Requests grouped by service area" items={dashboardData.categories} /><DistributionPanel title="Tickets by Priority" subtitle="Priority mix across open tickets" items={dashboardData.priorities} /></div>{isAdmin && <div className="dashboard-grid"><TrendChart /><AdminStats stats={dashboardData.userStats} /></div>}{isManager && <ActivityPanel activities={visibleActivities} title="Recent Team Activity" />}<RecentTicketsTable activeRole={activeRole} tickets={visibleTickets} />{canViewTechnicianWorkload && <TechnicianWorkload technicians={dashboardData.technicians} title={isManager ? "Agent Performance" : "Technician Workload & Performance"} />}</>}
-      </main>
-    </div>
-
-  </div>;
+      {!loading && !error && dashboard && <>
+        {dashboard.summary.totalTickets === 0 ? <ScopeEmptyState role={activeRole} /> : <>
+          <KpiGrid summary={dashboard.summary} role={activeRole} />
+          <div className="dashboard-analytics-grid">
+            {!isEmployee && <BarAnalyticsChart title="Tickets by Status" subtitle="Current status distribution in your scope" data={dashboard.status} />}
+            {!isEmployee && <PriorityChart data={dashboard.priority} />}
+          </div>
+          <div className={`dashboard-bottom-grid${isEmployee ? " dashboard-bottom-grid-single" : ""}`}>
+            {!isEmployee && <BarAnalyticsChart title="Tickets by Category" subtitle="Requests grouped by service area" data={dashboard.category} color="#6366f1" horizontal />}
+            <ActivityPanel activities={dashboard.activity} title={isEmployee ? "My Recent Ticket Updates" : "Recent Activity"} />
+          </div>
+          {canViewAgentPerformance && <div className="dashboard-agent-performance-row"><AgentPerformanceChart data={dashboard.agentPerformance} /></div>}
+        </>}
+        <QuickActions role={activeRole} />
+      </>}
+    </AppLayout>
+  );
 }
 
 export default Dashboard;

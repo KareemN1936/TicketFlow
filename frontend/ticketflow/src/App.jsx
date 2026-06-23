@@ -9,12 +9,16 @@ import TicketForm from "./pages/TicketForm";
 import TicketDetails from "./pages/TicketDetails";
 import Unauthorized from "./pages/Unauthorized";
 import ProtectedRoute from "./routes/ProtectedRoute";
+import Notifications from "./pages/Notifications";
+import AdminUsers from "./pages/AdminUsers";
+import NotificationProvider from "./notifications/NotificationProvider";
 
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <Routes>
+      <NotificationProvider>
+        <BrowserRouter>
+          <Routes>
           <Route path="/" element={<Navigate to="/login" />} />
           <Route path="/login" element={<Login />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -34,11 +38,19 @@ function App() {
             path="/admin"
             element={
               <ProtectedRoute allowedRoles={["Admin"]}>
-                <h1>Admin Page</h1>
+                <AdminUsers />
               </ProtectedRoute>
             }
           />
 
+          <Route
+            path="/notifications"
+            element={
+              <ProtectedRoute>
+                <Notifications />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/tickets"
             element={
@@ -50,7 +62,7 @@ function App() {
           <Route
             path="/tickets/create"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={["Admin", "Employee"]}>
                 <TicketForm />
               </ProtectedRoute>
             }
@@ -66,13 +78,14 @@ function App() {
           <Route
             path="/tickets/:id/edit"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={["Admin", "Manager", "ITSupportAgent"]}>
                 <TicketForm />
               </ProtectedRoute>
             }
           />
-        </Routes>
-      </BrowserRouter>
+          </Routes>
+        </BrowserRouter>
+      </NotificationProvider>
     </AuthProvider>
   );
 }

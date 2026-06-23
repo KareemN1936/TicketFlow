@@ -2,4 +2,5 @@
 **/obj/
 **/node_modules/
 **/dist/
+backend/TicketFlow.API/Uploads/
 appsettings.Development.json
