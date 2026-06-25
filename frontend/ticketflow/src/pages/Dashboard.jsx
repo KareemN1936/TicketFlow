@@ -62,10 +62,10 @@ function KpiGrid({ summary, role }) {
 }
 
 const quickActions = {
-  Admin: [["Manage Users", "/admin", "user"], ["View Tickets", "/tickets", "ticket"], ["Notifications", "/notifications", "bell"]],
-  Manager: [["View Tickets", "/tickets", "ticket"], ["Notifications", "/notifications", "bell"]],
+  Admin: [["Create Ticket", "/tickets/create", "plus"], ["Manage Users", "/admin", "user"], ["View Tickets", "/tickets", "ticket"], ["Notifications", "/notifications", "bell"]],
+  Manager: [["Create Ticket", "/tickets/create", "plus"], ["View Tickets", "/tickets", "ticket"], ["Notifications", "/notifications", "bell"]],
   Employee: [["Create Ticket", "/tickets/create", "plus"], ["My Tickets", "/tickets", "ticket"], ["Notifications", "/notifications", "bell"]],
-  ITSupportAgent: [["Assigned Tickets", "/tickets", "ticket"], ["Notifications", "/notifications", "bell"]],
+  ITSupportAgent: [["Create Ticket", "/tickets/create", "plus"], ["Assigned Tickets", "/tickets", "ticket"], ["Notifications", "/notifications", "bell"]],
 };
 
 function QuickActions({ role }) {

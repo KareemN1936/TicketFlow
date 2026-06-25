@@ -23,6 +23,7 @@ import {
   formatFileSize,
   validateAttachment,
 } from "../utils/attachmentValidation";
+import { aiService } from "../services/aiService";
 
 const initialForm = {
   title: "",
@@ -59,6 +60,8 @@ function TicketForm() {
   const [deletingAttachmentId, setDeletingAttachmentId] = useState(null);
   const [error, setError] = useState("");
   const [validationErrors, setValidationErrors] = useState({});
+  const [aiSuggestion, setAiSuggestion] = useState(null);
+  const [aiLoading, setAiLoading] = useState("");
   const attachmentInputRef = useRef(null);
 
   useEffect(() => {
@@ -133,6 +136,17 @@ function TicketForm() {
 
     setValidationErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
+  }
+
+  async function requestSuggestion(kind) {
+    if (!formData.title.trim() || !formData.description.trim()) { setError("Add a title and description before requesting an AI suggestion."); return; }
+    setAiLoading(kind); setError(""); setAiSuggestion(null);
+    try {
+      const result = kind === "category" ? await aiService.suggestCategory({ title: formData.title, description: formData.description }) : await aiService.suggestPriority({ title: formData.title, description: formData.description });
+      setAiSuggestion({ ...result, kind });
+      if (result.suggestedId && window.confirm(`Use suggested ${kind} “${result.suggestedName}”?\n\n${result.reason}`)) setFormData(current => ({ ...current, [`${kind}Id`]: String(result.suggestedId) }));
+    } catch (requestError) { setError(getApiErrorMessage(requestError, "The AI suggestion could not be generated.")); }
+    finally { setAiLoading(""); }
   }
 
   function handleAttachmentSelection(event) {
@@ -340,6 +354,29 @@ function TicketForm() {
               />
               {validationErrors.description && <small className="ticket-field-error">{validationErrors.description}</small>}
             </label>
+
+            {!isEditing && (
+              <div className="ticket-field-wide ai-suggestion-panel">
+                <div className="ai-suggestion-panel-header">
+                  <strong>AI field suggestions</strong>
+                  <span>Suggestions are never applied without your confirmation.</span>
+                </div>
+                <div className="ai-suggestion-panel-actions">
+                  <button className="dashboard-button dashboard-button-secondary" type="button" disabled={!!aiLoading} onClick={() => requestSuggestion("category")}>
+                    {aiLoading === "category" ? "Thinking…" : "Suggest Category"}
+                  </button>
+                  <button className="dashboard-button dashboard-button-secondary" type="button" disabled={!!aiLoading} onClick={() => requestSuggestion("priority")}>
+                    {aiLoading === "priority" ? "Thinking…" : "Suggest Priority"}
+                  </button>
+                </div>
+                {aiSuggestion && (
+                  <p className="ai-suggestion-panel-result">
+                    <strong>{aiSuggestion.suggestedName || "Not configured"}</strong>
+                    {aiSuggestion.confidence ? ` · ${Math.round(aiSuggestion.confidence * 100)}% confidence` : ""} — {aiSuggestion.reason}
+                  </p>
+                )}
+              </div>
+            )}
 
             <label className="ticket-field">
               <span>Category <b>*</b></span>

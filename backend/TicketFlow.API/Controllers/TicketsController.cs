@@ -165,7 +165,6 @@ public class TicketsController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "Admin,Employee")]
     public async Task<ActionResult<TicketResponse>> CreateTicket(CreateTicket request)
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);

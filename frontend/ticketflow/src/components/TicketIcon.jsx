@@ -21,6 +21,9 @@ function TicketIcon({ name, size = 18 }) {
     attachment: <><path d="m21.4 11.6-8.9 8.9a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 1 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5" /></>,
     download: <><path d="M12 3v12m-4-4 4 4 4-4M5 19h14" /></>,
     file: <><path d="M6 2h8l4 4v16H6Z" /><path d="M14 2v5h5" /></>,
+    chart: <><path d="M4 20V10m6 10V4m6 16v-7m4 7H2" /></>,
+    sparkles: <><path d="m12 3 1.2 3.8L17 8l-3.8 1.2L12 13l-1.2-3.8L7 8l3.8-1.2ZM5 15l.8 2.2L8 18l-2.2.8L5 21l-.8-2.2L2 18l2.2-.8Z" /></>,
+    send: <><path d="m22 2-7 20-4-9-9-4Z" /><path d="M22 2 11 13" /></>,
   };
 
   return (

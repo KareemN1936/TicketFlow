@@ -12,6 +12,8 @@ import ProtectedRoute from "./routes/ProtectedRoute";
 import Notifications from "./pages/Notifications";
 import AdminUsers from "./pages/AdminUsers";
 import NotificationProvider from "./notifications/NotificationProvider";
+import Reports from "./pages/Reports";
+import AiChatWidget from "./components/AiChatWidget";
 
 function App() {
   return (
@@ -52,6 +54,10 @@ function App() {
             }
           />
           <Route
+            path="/reports"
+            element={<ProtectedRoute><Reports /></ProtectedRoute>}
+          />
+          <Route
             path="/tickets"
             element={
               <ProtectedRoute>
@@ -62,7 +68,7 @@ function App() {
           <Route
             path="/tickets/create"
             element={
-              <ProtectedRoute allowedRoles={["Admin", "Employee"]}>
+              <ProtectedRoute>
                 <TicketForm />
               </ProtectedRoute>
             }
@@ -84,6 +90,7 @@ function App() {
             }
           />
           </Routes>
+          <AiChatWidget />
         </BrowserRouter>
       </NotificationProvider>
     </AuthProvider>

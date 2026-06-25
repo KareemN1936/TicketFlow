@@ -10,6 +10,8 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using System.Text;
 
+LoadEnvironmentFile();
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
@@ -37,6 +39,7 @@ builder.Services.Configure<DataProtectionTokenProviderOptions>(options =>
 builder.Services.AddScoped<JwtService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddHttpClient<IAiTicketService, AiTicketService>();
 
 builder.Services.AddCors(options =>
 {
@@ -149,6 +152,30 @@ app.MapControllers();
 app.MapHub<NotificationHub>("/hubs/notifications");
 
 app.Run();
+
+static void LoadEnvironmentFile()
+{
+    var envPath = Path.Combine(Directory.GetCurrentDirectory(), ".env");
+    if (!File.Exists(envPath)) return;
+
+    foreach (var rawLine in File.ReadAllLines(envPath))
+    {
+        var line = rawLine.Trim();
+        if (string.IsNullOrWhiteSpace(line) || line.StartsWith('#')) continue;
+
+        var separatorIndex = line.IndexOf('=');
+        if (separatorIndex <= 0) continue;
+
+        var name = line[..separatorIndex].Trim();
+        var value = line[(separatorIndex + 1)..].Trim().Trim('"', '\'');
+
+        // A real process-level environment variable takes precedence over .env.
+        if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(name)))
+        {
+            Environment.SetEnvironmentVariable(name, value);
+        }
+    }
+}
 
 static async Task ApplyMigrationsAsync(WebApplication app)
 {

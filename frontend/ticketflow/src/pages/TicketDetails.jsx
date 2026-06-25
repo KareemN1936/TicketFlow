@@ -21,6 +21,7 @@ import {
   getTicketAttachments,
 } from "../services/attachmentService";
 import { formatFileSize } from "../utils/attachmentValidation";
+import { aiService } from "../services/aiService";
 
 const statuses = [
   { id: 1, name: "Open" },
@@ -74,6 +75,9 @@ function TicketDetails() {
   const [attachmentError, setAttachmentError] = useState("");
   const [error, setError] = useState(location.state?.error || "");
   const [success, setSuccess] = useState(location.state?.message || "");
+  const [aiSummary, setAiSummary] = useState("");
+  const [aiTroubleshooting, setAiTroubleshooting] = useState("");
+  const [aiLoading, setAiLoading] = useState("");
 
   const loadTicketData = useCallback(async () => {
     const [ticketData, commentData, activityData] = await Promise.all([
@@ -229,6 +233,14 @@ function TicketDetails() {
     }
   }
 
+  async function runAi(feature) {
+    setAiLoading(feature); setError("");
+    const payload = { ticketId: ticket.id, title: ticket.title, description: ticket.description, category: ticket.categoryName, priority: ticket.priorityName, status: ticket.statusName, comments: comments.filter(x => !x.isInternal || canManageWorkflow).map(x => x.commentText) };
+    try { const result = feature === "summary" ? await aiService.summarizeTicket(payload) : await aiService.troubleshooting(payload); if (feature === "summary") setAiSummary(result.content); else setAiTroubleshooting(result.content); }
+    catch (requestError) { setError(getApiErrorMessage(requestError, "The AI response could not be generated.")); }
+    finally { setAiLoading(""); }
+  }
+
   return (
     <AppLayout>
       <section className="dashboard-heading ticket-page-heading">
@@ -292,6 +304,10 @@ function TicketDetails() {
               </button>
             </footer>}
           </section>
+
+          <section className="card ai-ticket-card"><header><div><h2>AI Summary</h2><p>A concise, on-demand view of this ticket. AI output may need verification.</p></div><button className="dashboard-button dashboard-button-secondary" type="button" disabled={!!aiLoading} onClick={() => runAi("summary")}>{aiLoading === "summary" ? "Generating…" : aiSummary ? "Refresh Summary" : "Generate Summary"}</button></header>{aiSummary ? <p className="ai-output">{aiSummary}</p> : <p className="ticket-empty-copy">No AI summary generated yet.</p>}</section>
+
+          {(role === "Admin" || role === "ITSupportAgent") && <section className="card ai-ticket-card"><header><div><h2>AI Troubleshooting Suggestions</h2><p>Practical ideas for the service team; review before applying.</p></div><button className="dashboard-button dashboard-button-secondary" type="button" disabled={!!aiLoading} onClick={() => runAi("troubleshooting")}>{aiLoading === "troubleshooting" ? "Generating…" : aiTroubleshooting ? "Refresh Suggestions" : "Generate Suggestions"}</button></header>{aiTroubleshooting ? <p className="ai-output">{aiTroubleshooting}</p> : <p className="ticket-empty-copy">No suggestions generated yet.</p>}</section>}
 
           {canManageWorkflow && (
             <section className="card ticket-workflow-card">

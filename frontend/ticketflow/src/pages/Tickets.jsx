@@ -18,7 +18,6 @@ function Tickets() {
   const canManageWorkflow = ["Admin", "ITSupportAgent", "Manager"].includes(role);
   const isEmployee = role === "Employee";
   const isAgent = role === "ITSupportAgent";
-  const canCreateTicket = role === "Admin" || isEmployee;
 
   useEffect(() => {
     let ignore = false;
@@ -76,10 +75,10 @@ function Tickets() {
           <h1>Tickets</h1>
           <p>Review, update, and manage support requests.</p>
         </div>
-        {canCreateTicket && <Link className="dashboard-button dashboard-button-primary" to="/tickets/create">
+        <Link className="dashboard-button dashboard-button-primary" to="/tickets/create">
           <TicketIcon name="plus" />
           Create Ticket
-        </Link>}
+        </Link>
       </section>
 
       {error && <div className="ticket-alert ticket-alert-error" role="alert">{error}</div>}
@@ -105,9 +104,9 @@ function Tickets() {
             <span className="ticket-state-icon"><TicketIcon name="ticket" size={24} /></span>
             <strong>No tickets yet</strong>
             <p>{isAgent ? "No tickets are currently assigned to you." : isEmployee ? "Create your first support request to get started." : "No tickets are available."}</p>
-            {canCreateTicket && <Link className="dashboard-button dashboard-button-primary" to="/tickets/create">
+            <Link className="dashboard-button dashboard-button-primary" to="/tickets/create">
               Create Ticket
-            </Link>}
+            </Link>
           </div>
         ) : (
           <div className="table-scroll">
