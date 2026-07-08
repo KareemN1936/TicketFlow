@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import AppLayout from "../components/AppLayout";
 import TicketIcon from "../components/TicketIcon";
 import { adminUserService } from "../services/adminUserService";
@@ -18,6 +18,17 @@ function AdminUsers() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [roleFilter, setRoleFilter] = useState("");
+
+  const filteredUsers = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+    return users.filter((user) => {
+      const matchesSearch = !query || [user.fullName, user.email, user.role]
+        .some((value) => String(value || "").toLowerCase().includes(query));
+      return matchesSearch && (!roleFilter || user.role === roleFilter);
+    });
+  }, [roleFilter, searchTerm, users]);
 
   const loadData = useCallback(async () => {
     await Promise.resolve();
@@ -40,6 +51,11 @@ function AdminUsers() {
 
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { loadData(); }, [loadData]);
+
+  function clearFilters() {
+    setSearchTerm("");
+    setRoleFilter("");
+  }
 
   async function createUser(event) {
     event.preventDefault();
@@ -100,32 +116,123 @@ function AdminUsers() {
   return (
     <AppLayout>
       <section className="dashboard-heading">
-        <div><p className="dashboard-welcome">Administration</p><h1>User Management</h1><p>Create accounts and control access roles.</p></div>
-        <button className="dashboard-button dashboard-button-primary" type="button" onClick={openCreateUser} disabled={!roles.length}><TicketIcon name="plus" />Create User</button>
+        <div>
+          <p className="dashboard-welcome">Administration</p>
+          <h1>User Management</h1>
+          <p>Create accounts and control access roles.</p>
+        </div>
+        <button className="dashboard-button dashboard-button-primary" type="button" onClick={openCreateUser} disabled={!roles.length}>
+          <TicketIcon name="plus" />
+          Create User
+        </button>
       </section>
 
       {error && <div className="ticket-alert ticket-alert-error" role="alert">{error}</div>}
       {success && <div className="ticket-alert ticket-alert-success" role="status">{success}</div>}
 
       <section className="card admin-user-list-card admin-user-list-full">
-        <div className="panel-header"><div><h2>Users</h2><span className="panel-subtitle">{users.length} account{users.length === 1 ? "" : "s"}</span></div></div>
-        {loading ? <div className="ticket-state"><span className="ticket-spinner" /><p>Loading users…</p></div> : !users.length ? <div className="ticket-state"><strong>No users found</strong></div> : (
-          <div className="admin-user-table-wrap"><table className="admin-user-table"><thead><tr><th>User</th><th>Email</th><th>Created</th><th>Role</th><th>Actions</th></tr></thead><tbody>{users.map((user) => <tr key={user.id}><td><strong>{user.fullName || "Unnamed user"}</strong></td><td>{user.email}</td><td>{new Date(user.createdAt).toLocaleDateString()}</td><td><select aria-label={`Role for ${user.fullName || user.email}`} value={user.role} disabled={updatingId === user.id || deletingId === user.id} onChange={(event) => changeRole(user.id, event.target.value)}>{roles.map((role) => <option key={role}>{role}</option>)}</select></td><td><button className="ticket-action-button ticket-action-danger" type="button" disabled={deletingId === user.id} onClick={() => deleteUser(user)}><TicketIcon name="trash" />{deletingId === user.id ? "Deleting…" : "Delete"}</button></td></tr>)}</tbody></table></div>
+        <div className="panel-header">
+          <div>
+            <h2>Users</h2>
+            <span className="panel-subtitle">
+              {loading ? "Loading accounts..." : `${filteredUsers.length} of ${users.length} account${users.length === 1 ? "" : "s"}`}
+            </span>
+          </div>
+        </div>
+
+        {!loading && users.length > 0 && (
+          <div className="list-filter-bar admin-filter-bar" aria-label="User filters">
+            <label className="list-filter-search">
+              <span>Search users</span>
+              <input
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="Name or email..."
+              />
+            </label>
+            <label>
+              <span>Role</span>
+              <select value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)}>
+                <option value="">All roles</option>
+                {roles.map((role) => <option key={role} value={role}>{role}</option>)}
+              </select>
+            </label>
+            <button className="dashboard-button dashboard-button-secondary list-filter-clear" type="button" onClick={clearFilters}>
+              Clear
+            </button>
+          </div>
+        )}
+
+        {loading ? (
+          <div className="ticket-state"><span className="ticket-spinner" /><p>Loading users...</p></div>
+        ) : !users.length ? (
+          <div className="ticket-state"><strong>No users found</strong></div>
+        ) : filteredUsers.length === 0 ? (
+          <div className="ticket-state ticket-state-filtered">
+            <strong>No users match these filters</strong>
+            <p>Try a different search term or role.</p>
+            <button className="dashboard-button dashboard-button-secondary" type="button" onClick={clearFilters}>Clear filters</button>
+          </div>
+        ) : (
+          <div className="admin-user-table-wrap">
+            <table className="admin-user-table">
+              <thead>
+                <tr><th>User</th><th>Email</th><th>Created</th><th>Role</th><th>Actions</th></tr>
+              </thead>
+              <tbody>
+                {filteredUsers.map((user) => (
+                  <tr key={user.id}>
+                    <td><strong>{user.fullName || "Unnamed user"}</strong></td>
+                    <td>{user.email}</td>
+                    <td>{new Date(user.createdAt).toLocaleDateString()}</td>
+                    <td>
+                      <select
+                        aria-label={`Role for ${user.fullName || user.email}`}
+                        value={user.role}
+                        disabled={updatingId === user.id || deletingId === user.id}
+                        onChange={(event) => changeRole(user.id, event.target.value)}
+                      >
+                        {roles.map((role) => <option key={role}>{role}</option>)}
+                      </select>
+                    </td>
+                    <td>
+                      <button className="ticket-action-button ticket-action-danger" type="button" disabled={deletingId === user.id} onClick={() => deleteUser(user)}>
+                        <TicketIcon name="trash" />
+                        {deletingId === user.id ? "Deleting..." : "Delete"}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
 
-      {isCreateOpen && <div className="modal-backdrop admin-create-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !submitting) setIsCreateOpen(false); }}>
-        <section className="card ticket-modal admin-create-modal" role="dialog" aria-modal="true" aria-labelledby="create-user-title">
-          <div className="modal-header"><div><p className="dashboard-welcome">Administration</p><h2 id="create-user-title">Create User</h2><span className="panel-subtitle">Add an account and assign its access role.</span></div><button className="modal-close" type="button" aria-label="Close" disabled={submitting} onClick={() => setIsCreateOpen(false)}>×</button></div>
-          <form className="admin-user-form" onSubmit={createUser}>
-            <label className="ticket-field"><span>Full name</span><input autoFocus required value={form.fullName} onChange={(event) => setForm({ ...form, fullName: event.target.value })} /></label>
-            <label className="ticket-field"><span>Email</span><input required type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} /></label>
-            <label className="ticket-field"><span>Temporary password</span><input required minLength="6" type="password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} /></label>
-            <label className="ticket-field"><span>Role</span><select required value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value })}>{roles.map((role) => <option key={role}>{role}</option>)}</select></label>
-            <div className="modal-actions"><button className="dashboard-button dashboard-button-secondary" type="button" disabled={submitting} onClick={() => setIsCreateOpen(false)}>Cancel</button><button className="dashboard-button dashboard-button-primary" disabled={submitting || !roles.length}>{submitting ? "Creating…" : "Create User"}</button></div>
-          </form>
-        </section>
-      </div>}
+      {isCreateOpen && (
+        <div className="modal-backdrop admin-create-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !submitting) setIsCreateOpen(false); }}>
+          <section className="card ticket-modal admin-create-modal" role="dialog" aria-modal="true" aria-labelledby="create-user-title">
+            <div className="modal-header">
+              <div>
+                <p className="dashboard-welcome">Administration</p>
+                <h2 id="create-user-title">Create User</h2>
+                <span className="panel-subtitle">Add an account and assign its access role.</span>
+              </div>
+              <button className="modal-close" type="button" aria-label="Close" disabled={submitting} onClick={() => setIsCreateOpen(false)}>x</button>
+            </div>
+            <form className="admin-user-form" onSubmit={createUser}>
+              <label className="ticket-field"><span>Full name</span><input autoFocus required value={form.fullName} onChange={(event) => setForm({ ...form, fullName: event.target.value })} /></label>
+              <label className="ticket-field"><span>Email</span><input required type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} /></label>
+              <label className="ticket-field"><span>Temporary password</span><input required minLength="6" type="password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} /></label>
+              <label className="ticket-field"><span>Role</span><select required value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value })}>{roles.map((role) => <option key={role}>{role}</option>)}</select></label>
+              <div className="modal-actions">
+                <button className="dashboard-button dashboard-button-secondary" type="button" disabled={submitting} onClick={() => setIsCreateOpen(false)}>Cancel</button>
+                <button className="dashboard-button dashboard-button-primary" disabled={submitting || !roles.length}>{submitting ? "Creating..." : "Create User"}</button>
+              </div>
+            </form>
+          </section>
+        </div>
+      )}
     </AppLayout>
   );
 }

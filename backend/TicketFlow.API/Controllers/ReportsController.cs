@@ -22,54 +22,75 @@ public class ReportsController : ControllerBase
     public ReportsController(ApplicationDbContext context) => _context = context;
 
     [HttpGet("summary")]
-    public async Task<ActionResult<ReportSummaryResponse>> Summary(CancellationToken ct)
+    public async Task<ActionResult<ReportSummaryResponse>> Summary([FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate, CancellationToken ct)
     {
-        var tickets = await ScopedTickets().Include(x => x.TicketStatus).AsNoTracking().ToListAsync(ct);
+        if (!IsValidDateRange(startDate, endDate)) return BadRequest("Start date cannot be after end date.");
+        var tickets = await FilterByDate(ScopedTickets(), startDate, endDate).Include(x => x.TicketStatus).AsNoTracking().ToListAsync(ct);
         return Ok(BuildSummary(tickets));
     }
 
     [HttpGet("tickets-by-status")]
-    public Task<List<ChartItemResponse>> ByStatus(CancellationToken ct) => Group(ScopedTickets(), x => x.TicketStatus!.StatusName, ct);
+    public async Task<ActionResult<IEnumerable<ChartItemResponse>>> ByStatus([FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate, CancellationToken ct)
+    {
+        if (!IsValidDateRange(startDate, endDate)) return BadRequest("Start date cannot be after end date.");
+        return Ok(await Group(FilterByDate(ScopedTickets(), startDate, endDate), x => x.TicketStatus!.StatusName, ct));
+    }
 
     [HttpGet("tickets-by-priority")]
-    public Task<List<ChartItemResponse>> ByPriority(CancellationToken ct) => Group(ScopedTickets(), x => x.Priority!.PriorityName, ct);
+    public async Task<ActionResult<IEnumerable<ChartItemResponse>>> ByPriority([FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate, CancellationToken ct)
+    {
+        if (!IsValidDateRange(startDate, endDate)) return BadRequest("Start date cannot be after end date.");
+        return Ok(await Group(FilterByDate(ScopedTickets(), startDate, endDate), x => x.Priority!.PriorityName, ct));
+    }
 
     [HttpGet("tickets-by-category")]
-    public Task<List<ChartItemResponse>> ByCategory(CancellationToken ct) => Group(ScopedTickets(), x => x.Category!.CategoryName, ct);
+    public async Task<ActionResult<IEnumerable<ChartItemResponse>>> ByCategory([FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate, CancellationToken ct)
+    {
+        if (!IsValidDateRange(startDate, endDate)) return BadRequest("Start date cannot be after end date.");
+        return Ok(await Group(FilterByDate(ScopedTickets(), startDate, endDate), x => x.Category!.CategoryName, ct));
+    }
 
     [HttpGet("monthly")]
-    public async Task<ActionResult<IEnumerable<MonthlyReportResponse>>> Monthly(CancellationToken ct)
+    public async Task<ActionResult<IEnumerable<MonthlyReportResponse>>> Monthly([FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate, CancellationToken ct)
     {
-        var tickets = await ScopedTickets().Include(x => x.TicketStatus).AsNoTracking().ToListAsync(ct);
-        return Ok(BuildMonthly(tickets));
+        if (!IsValidDateRange(startDate, endDate)) return BadRequest("Start date cannot be after end date.");
+        var tickets = await FilterByDate(ScopedTickets(), startDate, endDate).Include(x => x.TicketStatus).AsNoTracking().ToListAsync(ct);
+        return Ok(BuildMonthly(tickets, startDate, endDate));
     }
 
     [HttpGet("resolution-time")]
-    public async Task<ActionResult<ResolutionTimeResponse>> ResolutionTime(CancellationToken ct)
+    public async Task<ActionResult<ResolutionTimeResponse>> ResolutionTime([FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate, CancellationToken ct)
     {
-        var tickets = await ScopedTickets().Include(x => x.TicketStatus).AsNoTracking().ToListAsync(ct);
+        if (!IsValidDateRange(startDate, endDate)) return BadRequest("Start date cannot be after end date.");
+        var tickets = await FilterByDate(ScopedTickets(), startDate, endDate).Include(x => x.TicketStatus).AsNoTracking().ToListAsync(ct);
         var resolved = Completed(tickets).ToList();
         return Ok(new ResolutionTimeResponse { ResolvedTicketCount = resolved.Count, AverageHours = AverageResolutionHours(resolved) });
     }
 
     [HttpGet("agent-performance")]
     [Authorize(Roles = "Admin,Manager")]
-    public async Task<ActionResult<IEnumerable<ReportAgentPerformanceResponse>>> AgentPerformance(CancellationToken ct) => Ok(await BuildAgentPerformance(ct));
+    public async Task<ActionResult<IEnumerable<ReportAgentPerformanceResponse>>> AgentPerformance([FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate, CancellationToken ct)
+    {
+        if (!IsValidDateRange(startDate, endDate)) return BadRequest("Start date cannot be after end date.");
+        return Ok(await BuildAgentPerformance(startDate, endDate, ct));
+    }
 
     [HttpGet("employee-activity")]
     [Authorize(Roles = "Admin,Manager")]
-    public async Task<ActionResult<IEnumerable<EmployeeActivityResponse>>> EmployeeActivity(CancellationToken ct)
+    public async Task<ActionResult<IEnumerable<EmployeeActivityResponse>>> EmployeeActivity([FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate, CancellationToken ct)
     {
-        var tickets = await ScopedTickets().Include(x => x.CreatedByUser).Include(x => x.TicketStatus).AsNoTracking().ToListAsync(ct);
+        if (!IsValidDateRange(startDate, endDate)) return BadRequest("Start date cannot be after end date.");
+        var tickets = await FilterByDate(ScopedTickets(), startDate, endDate).Include(x => x.CreatedByUser).Include(x => x.TicketStatus).AsNoTracking().ToListAsync(ct);
         return Ok(tickets.GroupBy(x => new { x.CreatedByUserId, Name = x.CreatedByUser!.FullName })
             .Select(g => new EmployeeActivityResponse { EmployeeId = g.Key.CreatedByUserId, EmployeeName = g.Key.Name, CreatedTickets = g.Count(), ResolvedTickets = g.Count(IsCompleted), PendingTickets = g.Count(x => x.TicketStatus!.StatusName == "Pending") })
             .OrderByDescending(x => x.CreatedTickets));
     }
 
     [HttpGet("export/excel")]
-    public async Task<IActionResult> ExportExcel(CancellationToken ct)
+    public async Task<IActionResult> ExportExcel([FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate, CancellationToken ct)
     {
-        var data = await LoadExportData(ct);
+        if (!IsValidDateRange(startDate, endDate)) return BadRequest("Start date cannot be after end date.");
+        var data = await LoadExportData(startDate, endDate, ct);
         using var workbook = new XLWorkbook();
         AddSheet(workbook, "Summary", new[] { "Metric", "Value" }, SummaryRows(data.Summary));
         AddSheet(workbook, "Status", new[] { "Status", "Tickets" }, data.Status.Select(x => new object[] { x.Name, x.Count }));
@@ -83,9 +104,10 @@ public class ReportsController : ControllerBase
     }
 
     [HttpGet("export/pdf")]
-    public async Task<IActionResult> ExportPdf(CancellationToken ct)
+    public async Task<IActionResult> ExportPdf([FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate, CancellationToken ct)
     {
-        var data = await LoadExportData(ct);
+        if (!IsValidDateRange(startDate, endDate)) return BadRequest("Start date cannot be after end date.");
+        var data = await LoadExportData(startDate, endDate, ct);
         QuestPDF.Settings.License = LicenseType.Community;
         var generated = DateTime.UtcNow;
         var user = User.Identity?.Name ?? "Unknown user";
@@ -93,7 +115,7 @@ public class ReportsController : ControllerBase
         var bytes = Document.Create(document => document.Page(page =>
         {
             page.Size(PageSizes.A4); page.Margin(28); page.DefaultTextStyle(x => x.FontSize(9));
-            page.Header().Column(c => { c.Item().Text("TicketFlow Reports").Bold().FontSize(20).FontColor(Colors.Blue.Medium); c.Item().Text($"Generated {generated:u} | {user} | {role}").FontColor(Colors.Grey.Darken1); });
+            page.Header().Column(c => { c.Item().Text("TicketFlow Reports").Bold().FontSize(20).FontColor(Colors.Blue.Medium); c.Item().Text($"Generated {generated:u} | {user} | {role}").FontColor(Colors.Grey.Darken1); c.Item().Text(FormatDateRange(startDate, endDate)).FontColor(Colors.Grey.Darken1); });
             page.Content().PaddingVertical(15).Column(c =>
             {
                 c.Spacing(12);
@@ -119,6 +141,23 @@ public class ReportsController : ControllerBase
         return query.Where(_ => false);
     }
 
+    private static bool IsValidDateRange(DateTime? startDate, DateTime? endDate) => !startDate.HasValue || !endDate.HasValue || startDate.Value.Date <= endDate.Value.Date;
+
+    private static IQueryable<Ticket> FilterByDate(IQueryable<Ticket> query, DateTime? startDate, DateTime? endDate)
+    {
+        if (startDate.HasValue) query = query.Where(x => x.CreatedAt >= startDate.Value.Date);
+        if (endDate.HasValue) query = query.Where(x => x.CreatedAt < endDate.Value.Date.AddDays(1));
+        return query;
+    }
+
+    private static string FormatDateRange(DateTime? startDate, DateTime? endDate)
+    {
+        if (!startDate.HasValue && !endDate.HasValue) return "Date range: All time";
+        var start = startDate?.ToString("yyyy-MM-dd") ?? "Beginning";
+        var end = endDate?.ToString("yyyy-MM-dd") ?? "Today";
+        return $"Date range: {start} to {end}";
+    }
+
     private static async Task<List<ChartItemResponse>> Group(IQueryable<Ticket> query, System.Linq.Expressions.Expression<Func<Ticket, string>> key, CancellationToken ct) =>
         await query.GroupBy(key).Select(g => new ChartItemResponse { Name = g.Key, Count = g.Count() }).OrderByDescending(x => x.Count).ToListAsync(ct);
 
@@ -136,27 +175,35 @@ public class ReportsController : ControllerBase
         TotalTickets = tickets.Count, OpenTickets = tickets.Count(x => x.TicketStatus?.StatusName == "Open"), InProgressTickets = tickets.Count(x => x.TicketStatus?.StatusName == "In Progress"), PendingTickets = tickets.Count(x => x.TicketStatus?.StatusName == "Pending"), ResolvedTickets = tickets.Count(x => x.TicketStatus?.StatusName == "Resolved"), ClosedTickets = tickets.Count(x => x.TicketStatus?.StatusName == "Closed"), AverageResolutionHours = AverageResolutionHours(tickets)
     };
 
-    private static List<MonthlyReportResponse> BuildMonthly(List<Ticket> tickets)
+    private static List<MonthlyReportResponse> BuildMonthly(List<Ticket> tickets, DateTime? startDate = null, DateTime? endDate = null)
     {
-        var start = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1).AddMonths(-11);
-        return Enumerable.Range(0, 12).Select(offset => start.AddMonths(offset)).Select(month => new MonthlyReportResponse
+        var start = startDate.HasValue
+            ? new DateTime(startDate.Value.Year, startDate.Value.Month, 1)
+            : new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1).AddMonths(-11);
+        var end = endDate.HasValue
+            ? new DateTime(endDate.Value.Year, endDate.Value.Month, 1)
+            : start.AddMonths(11);
+        var monthCount = ((end.Year - start.Year) * 12) + end.Month - start.Month + 1;
+        monthCount = Math.Max(1, Math.Min(monthCount, 24));
+
+        return Enumerable.Range(0, monthCount).Select(offset => start.AddMonths(offset)).Select(month => new MonthlyReportResponse
         {
             Month = month.ToString("MMM yyyy"), Created = tickets.Count(x => x.CreatedAt.Year == month.Year && x.CreatedAt.Month == month.Month), Resolved = tickets.Count(x => IsCompleted(x) && x.UpdatedAt?.Year == month.Year && x.UpdatedAt?.Month == month.Month)
         }).ToList();
     }
 
-    private async Task<List<ReportAgentPerformanceResponse>> BuildAgentPerformance(CancellationToken ct)
+    private async Task<List<ReportAgentPerformanceResponse>> BuildAgentPerformance(DateTime? startDate, DateTime? endDate, CancellationToken ct)
     {
-        var tickets = await ScopedTickets().Include(x => x.AssignedToUser).Include(x => x.TicketStatus).Where(x => x.AssignedToUserId != null).AsNoTracking().ToListAsync(ct);
+        var tickets = await FilterByDate(ScopedTickets(), startDate, endDate).Include(x => x.AssignedToUser).Include(x => x.TicketStatus).Where(x => x.AssignedToUserId != null).AsNoTracking().ToListAsync(ct);
         return tickets.GroupBy(x => new { Id = x.AssignedToUserId!, Name = x.AssignedToUser!.FullName }).Select(g => new ReportAgentPerformanceResponse { AgentId = g.Key.Id, AgentName = g.Key.Name, AssignedTickets = g.Count(), ResolvedTickets = g.Count(IsCompleted), OpenTickets = g.Count(x => !IsCompleted(x)), AverageResolutionHours = AverageResolutionHours(g) }).OrderByDescending(x => x.AssignedTickets).ToList();
     }
 
-    private async Task<ExportData> LoadExportData(CancellationToken ct)
+    private async Task<ExportData> LoadExportData(DateTime? startDate, DateTime? endDate, CancellationToken ct)
     {
-        var tickets = await ScopedTickets().Include(x => x.TicketStatus).Include(x => x.Priority).Include(x => x.Category).AsNoTracking().ToListAsync(ct);
-        var agents = User.IsInRole(RoleNames.Admin) || User.IsInRole(RoleNames.Manager) ? await BuildAgentPerformance(ct) : [];
+        var tickets = await FilterByDate(ScopedTickets(), startDate, endDate).Include(x => x.TicketStatus).Include(x => x.Priority).Include(x => x.Category).AsNoTracking().ToListAsync(ct);
+        var agents = User.IsInRole(RoleNames.Admin) || User.IsInRole(RoleNames.Manager) ? await BuildAgentPerformance(startDate, endDate, ct) : [];
         List<ChartItemResponse> GroupLocal(Func<Ticket, string> key) => tickets.GroupBy(key).Select(g => new ChartItemResponse { Name = g.Key, Count = g.Count() }).OrderByDescending(x => x.Count).ToList();
-        return new(BuildSummary(tickets), GroupLocal(x => x.TicketStatus!.StatusName), GroupLocal(x => x.Priority!.PriorityName), GroupLocal(x => x.Category!.CategoryName), BuildMonthly(tickets), agents);
+        return new(BuildSummary(tickets), GroupLocal(x => x.TicketStatus!.StatusName), GroupLocal(x => x.Priority!.PriorityName), GroupLocal(x => x.Category!.CategoryName), BuildMonthly(tickets, startDate, endDate), agents);
     }
 
     private static IEnumerable<object[]> SummaryRows(ReportSummaryResponse x) => new[] { new object[] { "Total", x.TotalTickets }, ["Open", x.OpenTickets], ["In Progress", x.InProgressTickets], ["Pending", x.PendingTickets], ["Resolved", x.ResolvedTickets], ["Closed", x.ClosedTickets], ["Average Resolution Hours", x.AverageResolutionHours] };

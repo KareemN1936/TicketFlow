@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { aiService } from "../services/aiService";
@@ -20,14 +20,31 @@ function AiChatWidget() {
   const { user } = useAuth();
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
+  const [position, setPosition] = useState(null);
   const [messages, setMessages] = useState([starterMessage]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const widgetWindowRef = useRef(null);
+  const dragRef = useRef(null);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
   const isPublicPage = ["/", "/login", "/forgot-password", "/reset-password", "/unauthorized"].includes(location.pathname);
+  const widgetWindowStyle = position ? { position: "fixed", left: `${position.x}px`, top: `${position.y}px` } : undefined;
+
+  const clampPosition = useCallback((x, y) => {
+    const widgetWindow = widgetWindowRef.current;
+    const width = widgetWindow?.offsetWidth || 0;
+    const height = widgetWindow?.offsetHeight || 0;
+    const maxX = Math.max(8, window.innerWidth - width - 8);
+    const maxY = Math.max(8, window.innerHeight - height - 8);
+
+    return {
+      x: Math.min(Math.max(8, x), maxX),
+      y: Math.min(Math.max(8, y), maxY),
+    };
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
@@ -41,9 +58,57 @@ function AiChatWidget() {
       if (event.key === "Escape") setIsOpen(false);
     }
 
+    function openFromTopbar() {
+      setIsOpen(true);
+    }
+
     window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
+    window.addEventListener("ticketflow:open-ai-assistant", openFromTopbar);
+
+    return () => {
+      window.removeEventListener("keydown", closeOnEscape);
+      window.removeEventListener("ticketflow:open-ai-assistant", openFromTopbar);
+    };
   }, []);
+
+  useEffect(() => {
+    function keepWidgetInView() {
+      setPosition((current) => current ? clampPosition(current.x, current.y) : current);
+    }
+
+    window.addEventListener("resize", keepWidgetInView);
+    return () => window.removeEventListener("resize", keepWidgetInView);
+  }, [clampPosition]);
+
+  function startDrag(event) {
+    if (event.button !== 0 || event.target.closest("button")) return;
+
+    const widgetWindow = widgetWindowRef.current;
+    if (!widgetWindow) return;
+
+    const rect = widgetWindow.getBoundingClientRect();
+    dragRef.current = {
+      offsetX: event.clientX - rect.left,
+      offsetY: event.clientY - rect.top,
+    };
+    setPosition({ x: rect.left, y: rect.top });
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function moveDrag(event) {
+    if (!dragRef.current) return;
+
+    const nextX = event.clientX - dragRef.current.offsetX;
+    const nextY = event.clientY - dragRef.current.offsetY;
+    setPosition(clampPosition(nextX, nextY));
+  }
+
+  function stopDrag(event) {
+    dragRef.current = null;
+    if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  }
 
   async function sendMessage(messageText) {
     const message = messageText.trim();
@@ -74,8 +139,8 @@ function AiChatWidget() {
   return (
     <div className={`ai-widget${isOpen ? " ai-widget-open" : ""}`}>
       {isOpen && (
-        <section className="ai-widget-window" aria-label="TicketFlow AI Assistant">
-          <header className="ai-widget-header">
+        <section className="ai-widget-window" ref={widgetWindowRef} style={widgetWindowStyle} aria-label="TicketFlow AI Assistant">
+          <header className="ai-widget-header" onPointerDown={startDrag} onPointerMove={moveDrag} onPointerUp={stopDrag} onPointerCancel={stopDrag}>
             <span className="ai-widget-bot-avatar"><TicketIcon name="sparkles" size={20} /></span>
             <div>
               <strong>TicketFlow Assistant</strong>

@@ -24,6 +24,7 @@ function TicketIcon({ name, size = 18 }) {
     chart: <><path d="M4 20V10m6 10V4m6 16v-7m4 7H2" /></>,
     sparkles: <><path d="m12 3 1.2 3.8L17 8l-3.8 1.2L12 13l-1.2-3.8L7 8l3.8-1.2ZM5 15l.8 2.2L8 18l-2.2.8L5 21l-.8-2.2L2 18l2.2-.8Z" /></>,
     send: <><path d="m22 2-7 20-4-9-9-4Z" /><path d="M22 2 11 13" /></>,
+    menu: <path d="M4 7h16M4 12h16M4 17h16" />,
   };
 
   return (

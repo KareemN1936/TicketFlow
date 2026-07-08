@@ -5,12 +5,15 @@
 }
 
 html {
+  width: 100%;
   min-height: 100%;
 }
 
 body {
   margin: 0;
+  width: 100%;
   min-height: 100vh;
+  overflow-x: hidden;
   font-family: var(--font-family-base);
   background: var(--color-background);
   color: var(--color-text-primary);
@@ -33,5 +36,11 @@ a {
 }
 
 #root {
+  width: 100%;
   min-height: 100vh;
+}
+
+img,
+svg {
+  max-width: 100%;
 }

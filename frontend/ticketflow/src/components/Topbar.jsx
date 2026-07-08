@@ -11,7 +11,7 @@ const roleAliases = {
   itsupportagent: "IT Support Agent",
 };
 
-function Topbar() {
+function Topbar({ onMenuClick }) {
   const { user } = useAuth();
   const { unreadCount } = useNotifications();
   const role = roleAliases[String(user?.roles?.[0] || "Employee").toLowerCase()] || user?.roles?.[0] || "Employee";
@@ -22,14 +22,21 @@ function Topbar() {
     .slice(0, 2)
     .toUpperCase() || "IT";
 
+  function openHelp() {
+    window.dispatchEvent(new CustomEvent("ticketflow:open-ai-assistant"));
+  }
+
   return (
     <header className="topbar ticket-topbar">
-      <div>
+      <button className="mobile-menu-button icon-button" type="button" aria-label="Open navigation menu" onClick={onMenuClick}>
+        <TicketIcon name="menu" />
+      </button>
+      <div className="topbar-title-block">
         <p className="topbar-eyebrow">Support workspace</p>
         <strong className="ticket-topbar-title">Ticket Management</strong>
       </div>
       <div className="topbar-actions">
-        <button className="icon-button" type="button" aria-label="Help">
+        <button className="icon-button" type="button" aria-label="Open help assistant" onClick={openHelp}>
           <TicketIcon name="help" />
         </button>
         <Link className="icon-button icon-button-notify" to="/notifications" aria-label={`Notifications${unreadCount ? ` (${unreadCount} unread)` : ""}`}>

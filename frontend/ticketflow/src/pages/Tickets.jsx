@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import AppLayout from "../components/AppLayout";
 import TicketIcon from "../components/TicketIcon";
@@ -14,10 +14,50 @@ function Tickets() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [deletingId, setDeletingId] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [priorityFilter, setPriorityFilter] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
   const role = getPrimaryRole(user);
   const canManageWorkflow = ["Admin", "ITSupportAgent", "Manager"].includes(role);
   const isEmployee = role === "Employee";
   const isAgent = role === "ITSupportAgent";
+
+  const filterOptions = useMemo(() => {
+    const unique = (key) => [...new Set(tickets.map((ticket) => ticket[key]).filter(Boolean))].sort();
+    return {
+      statuses: unique("statusName"),
+      priorities: unique("priorityName"),
+      categories: unique("categoryName"),
+    };
+  }, [tickets]);
+
+  const filteredTickets = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+    return tickets.filter((ticket) => {
+      const matchesSearch = !query || [
+        ticket.referenceNumber,
+        ticket.title,
+        ticket.categoryName,
+        ticket.priorityName,
+        ticket.statusName,
+        ticket.createdByUserName,
+        ticket.assignedToUserName,
+      ].some((value) => String(value || "").toLowerCase().includes(query));
+
+      return matchesSearch
+        && (!statusFilter || ticket.statusName === statusFilter)
+        && (!priorityFilter || ticket.priorityName === priorityFilter)
+        && (!categoryFilter || ticket.categoryName === categoryFilter);
+    });
+  }, [categoryFilter, priorityFilter, searchTerm, statusFilter, tickets]);
+
+  function clearFilters() {
+    setSearchTerm("");
+    setStatusFilter("");
+    setPriorityFilter("");
+    setCategoryFilter("");
+  }
 
   useEffect(() => {
     let ignore = false;
@@ -88,10 +128,47 @@ function Tickets() {
           <div>
             <h2>{isEmployee ? "My Tickets" : isAgent ? "My Assigned Tickets" : "All Tickets"}</h2>
             <span className="panel-subtitle">
-              {isLoading ? "Loading ticket queue..." : `${tickets.length} ticket${tickets.length === 1 ? "" : "s"}`}
+              {isLoading ? "Loading ticket queue..." : `${filteredTickets.length} of ${tickets.length} ticket${tickets.length === 1 ? "" : "s"}`}
             </span>
           </div>
         </div>
+
+        {!isLoading && tickets.length > 0 && (
+          <div className="list-filter-bar" aria-label="Ticket filters">
+            <label className="list-filter-search">
+              <span>Search tickets</span>
+              <input
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="Reference, title, user..."
+              />
+            </label>
+            <label>
+              <span>Status</span>
+              <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+                <option value="">All statuses</option>
+                {filterOptions.statuses.map((status) => <option key={status} value={status}>{status}</option>)}
+              </select>
+            </label>
+            <label>
+              <span>Priority</span>
+              <select value={priorityFilter} onChange={(event) => setPriorityFilter(event.target.value)}>
+                <option value="">All priorities</option>
+                {filterOptions.priorities.map((priority) => <option key={priority} value={priority}>{priority}</option>)}
+              </select>
+            </label>
+            <label>
+              <span>Category</span>
+              <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}>
+                <option value="">All categories</option>
+                {filterOptions.categories.map((category) => <option key={category} value={category}>{category}</option>)}
+              </select>
+            </label>
+            <button className="dashboard-button dashboard-button-secondary list-filter-clear" type="button" onClick={clearFilters}>
+              Clear
+            </button>
+          </div>
+        )}
 
         {isLoading ? (
           <div className="ticket-state" role="status">
@@ -107,6 +184,13 @@ function Tickets() {
             <Link className="dashboard-button dashboard-button-primary" to="/tickets/create">
               Create Ticket
             </Link>
+          </div>
+        ) : filteredTickets.length === 0 ? (
+          <div className="ticket-state ticket-state-filtered">
+            <span className="ticket-state-icon"><TicketIcon name="ticket" size={24} /></span>
+            <strong>No tickets match these filters</strong>
+            <p>Try a different search term or broaden the selected filters.</p>
+            <button className="dashboard-button dashboard-button-secondary" type="button" onClick={clearFilters}>Clear filters</button>
           </div>
         ) : (
           <div className="table-scroll">
@@ -125,7 +209,7 @@ function Tickets() {
                 </tr>
               </thead>
               <tbody>
-                {tickets.map((ticket) => (
+                {filteredTickets.map((ticket) => (
                   <tr key={ticket.id}>
                     <td><strong className="ticket-reference">{ticket.referenceNumber}</strong></td>
                     <td><Link className="ticket-title-link" to={`/tickets/${ticket.id}`}>{ticket.title}</Link></td>
