@@ -2,6 +2,7 @@
 **/obj/
 **/node_modules/
 **/dist/
+**/*.log
 backend/TicketFlow.API/Uploads/
 appsettings.Development.json
 **/.env

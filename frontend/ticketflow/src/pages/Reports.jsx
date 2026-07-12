@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import AppLayout from "../components/AppLayout";
 import TicketIcon from "../components/TicketIcon";
-import { useAuth } from "../auth/AuthContext";
+import { useAuth } from "../auth/useAuth";
 import { getPrimaryRole } from "../auth/roles";
 import { reportService } from "../services/reportService";
 import { getApiErrorMessage } from "../utils/apiError";

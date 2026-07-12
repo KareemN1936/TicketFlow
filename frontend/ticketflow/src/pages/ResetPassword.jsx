@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import horizontalLogo from "../assets/logo horizontal.png";
 import "../App.css";
@@ -16,12 +16,6 @@ function ResetPassword() {
   const [error, setError] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-
-  useEffect(() => {
-    if (!email || !token) {
-      setError("Invalid reset link. Please request a new password reset.");
-    }
-  }, [email, token]);
 
   function handleSubmit(event) {
     event.preventDefault();
@@ -120,7 +114,7 @@ function ResetPassword() {
             </header>
 
             <p className="ticket-login-error">
-              {error || "Please request a new password reset from the login page."}
+              Invalid reset link. Please request a new password reset.
             </p>
 
             <div className="ticket-login-options ticket-forgot-back">

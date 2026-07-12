@@ -15,7 +15,7 @@ import {
 } from "recharts";
 import AppLayout from "../components/AppLayout";
 import TicketIcon from "../components/TicketIcon";
-import { useAuth } from "../auth/AuthContext";
+import { useAuth } from "../auth/useAuth";
 import { getPrimaryRole } from "../auth/roles";
 import { dashboardService } from "../services/dashboardService";
 import { getApiErrorMessage } from "../utils/apiError";

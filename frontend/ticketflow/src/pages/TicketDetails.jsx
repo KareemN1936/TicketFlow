@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import AppLayout from "../components/AppLayout";
 import TicketIcon from "../components/TicketIcon";
-import { useAuth } from "../auth/AuthContext";
+import { useAuth } from "../auth/useAuth";
 import { getPrimaryRole } from "../auth/roles";
 import {
   addTicketComment,

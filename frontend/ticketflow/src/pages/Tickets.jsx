@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import AppLayout from "../components/AppLayout";
 import TicketIcon from "../components/TicketIcon";
-import { useAuth } from "../auth/AuthContext";
+import { useAuth } from "../auth/useAuth";
 import { getPrimaryRole } from "../auth/roles";
 import { deleteTicket, getTickets } from "../services/ticketService";
 import { getApiErrorMessage } from "../utils/apiError";

@@ -1,5 +1,5 @@
 import { Navigate, useLocation } from "react-router-dom";
-import { useAuth } from "../auth/AuthContext";
+import { useAuth } from "../auth/useAuth";
 import { userHasRole } from "../auth/roles";
 
 function ProtectedRoute({ children, allowedRoles }) {
