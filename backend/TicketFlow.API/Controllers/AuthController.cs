@@ -124,7 +124,8 @@ public class AuthController : ControllerBase
             var encodedToken = HttpUtility.UrlEncode(token);
 
             // Get frontend base URL from configuration
-            var frontendBaseUrl = _configuration["FrontendBaseUrl"] ?? "http://localhost:5173";
+            var frontendBaseUrl = _configuration["FrontendBaseUrl"]
+                ?? throw new InvalidOperationException("FrontendBaseUrl is not configured.");
 
             // Build reset password link
             var resetLink = $"{frontendBaseUrl}/reset-password?email={HttpUtility.UrlEncode(user.Email ?? string.Empty)}&token={encodedToken}";

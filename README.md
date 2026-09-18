@@ -48,7 +48,7 @@ cd TicketFlow
 
 2. Configure the backend.
 
-Update `backend/TicketFlow.API/appsettings.json` or create an ignored `appsettings.Development.json` with your local SQL Server connection string, JWT secret, email settings, and frontend URL.
+Copy `backend/TicketFlow.API/appsettings.Development.example.json` to the ignored `appsettings.Development.json`, then set your local SQL Server connection string, JWT secret, email settings, frontend URL, and allowed origins.
 
 For AI features, copy the example environment file and add your Groq key:
 
@@ -73,18 +73,49 @@ npm install
 npm run dev
 ```
 
-The frontend expects the API at `http://localhost:5215/api`.
+Copy `frontend/ticketflow/.env.example` to `.env.local` and set `VITE_API_BASE_URL` to the API URL.
 
-## Seeded Development Accounts
+## Optional Demo Accounts
+
+Demo accounts are created only when `SeedDemoData=true`. Set `DemoAccounts__Password` to a strong password in the environment; do not reuse a personal or production password.
 
 The backend seeds these accounts for local testing:
 
 | Role | Email | Password |
 |---|---|---|
-| Admin | admin@ticketflow.com | Password123. |
-| IT Support Agent | itsupportagent@ticketflow.com | Password123. |
-| Employee | employee@ticketflow.com | Password123. |
-| Manager | manager@ticketflow.com | Password123. |
+| Admin | admin@ticketflow.com | Value of `DemoAccounts__Password` |
+| IT Support Agent | itsupportagent@ticketflow.com | Value of `DemoAccounts__Password` |
+| Employee | employee@ticketflow.com | Value of `DemoAccounts__Password` |
+| Manager | manager@ticketflow.com | Value of `DemoAccounts__Password` |
+
+Use these accounts only with an isolated demo database. Leave `SeedDemoData=false` for real deployments.
+
+## Hosting Configuration
+
+The frontend can be hosted on Vercel with `frontend/ticketflow` as the root directory. Set `VITE_API_BASE_URL` to the public backend URL ending in `/api`.
+
+The backend requires an ASP.NET Core host and SQL Server. Configure at least:
+
+```text
+ConnectionStrings__DefaultConnection
+JwtSettings__SecretKey
+JwtSettings__Issuer
+JwtSettings__Audience
+FrontendBaseUrl
+AllowedOrigins
+SeedDemoData
+DemoAccounts__Password (only when demo seeding is enabled)
+EmailSettings__SmtpServer
+EmailSettings__SmtpPort
+EmailSettings__SenderName
+EmailSettings__SenderEmail
+EmailSettings__Username
+EmailSettings__Password
+GROQ_API_KEY (optional)
+GROQ_MODEL (optional)
+```
+
+Rotate any credential that has ever been committed before deploying. The API exposes `/health` for host health checks.
 
 ## Verification
 
