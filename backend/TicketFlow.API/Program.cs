@@ -14,19 +14,39 @@ LoadEnvironmentFile();
 
 var builder = WebApplication.CreateBuilder(args);
 
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+if (string.IsNullOrWhiteSpace(connectionString))
+{
+    throw new InvalidOperationException(
+        "ConnectionStrings:DefaultConnection is required. Set ConnectionStrings__DefaultConnection in hosted environments.");
+}
+
+var secretKey = builder.Configuration["JwtSettings:SecretKey"];
+if (string.IsNullOrWhiteSpace(secretKey) || secretKey.Length < 32 || secretKey.StartsWith("CHANGE_ME", StringComparison.OrdinalIgnoreCase))
+{
+    throw new InvalidOperationException(
+        "JwtSettings:SecretKey must be a non-placeholder secret of at least 32 characters.");
+}
+
+if (string.IsNullOrWhiteSpace(builder.Configuration["FrontendBaseUrl"]))
+{
+    throw new InvalidOperationException(
+        "FrontendBaseUrl is required for password-reset links.");
+}
+
 builder.Services.AddControllers();
 builder.Services.AddSignalR();
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(connectionString));
 
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 {
-    options.Password.RequiredLength = 6;
-    options.Password.RequireDigit = false;
-    options.Password.RequireUppercase = false;
-    options.Password.RequireLowercase = false;
-    options.Password.RequireNonAlphanumeric = false;
+    options.Password.RequiredLength = 8;
+    options.Password.RequireDigit = true;
+    options.Password.RequireUppercase = true;
+    options.Password.RequireLowercase = true;
+    options.Password.RequireNonAlphanumeric = true;
 })
 .AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders();
@@ -45,14 +65,22 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("ReactPolicy", policy =>
     {
-        policy.WithOrigins("http://localhost:5173", "http://localhost:5174")
+        var allowedOrigins = (builder.Configuration["AllowedOrigins"] ?? string.Empty)
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        if (allowedOrigins.Length == 0)
+        {
+            throw new InvalidOperationException(
+                "AllowedOrigins must contain at least one frontend origin.");
+        }
+
+        policy.WithOrigins(allowedOrigins)
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
     });
 });
 
-var secretKey = builder.Configuration["JwtSettings:SecretKey"];
 var issuer = builder.Configuration["JwtSettings:Issuer"];
 var audience = builder.Configuration["JwtSettings:Audience"];
 
@@ -131,9 +159,18 @@ var app = builder.Build();
 
 await ApplyMigrationsAsync(app);
 await SeedRolesAsync(app);
-await SeedPhase5RoleAccountsAsync(app);
-await SeedAdminUserAsync(app);
-await SeedTestUserAsync(app);
+
+if (app.Configuration.GetValue<bool>("SeedDemoData"))
+{
+    var demoPassword = app.Configuration["DemoAccounts:Password"];
+    if (string.IsNullOrWhiteSpace(demoPassword))
+    {
+        throw new InvalidOperationException(
+            "DemoAccounts:Password is required when SeedDemoData is enabled.");
+    }
+
+    await SeedDemoRoleAccountsAsync(app, demoPassword);
+}
 
 if (app.Environment.IsDevelopment())
 {
@@ -150,6 +187,7 @@ app.UseAuthorization();
 
 app.MapControllers();
 app.MapHub<NotificationHub>("/hubs/notifications");
+app.MapGet("/health", () => Results.Ok(new { status = "ok" })).AllowAnonymous();
 
 app.Run();
 
@@ -208,31 +246,7 @@ static async Task SeedRolesAsync(WebApplication app)
     }
 }
 
-static async Task SeedTestUserAsync(WebApplication app)
-{
-    using var scope = app.Services.CreateScope();
-
-    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-    
-    var testEmail = "test@example.com";
-    var testUser = await userManager.FindByEmailAsync(testEmail);
-    
-    if (testUser == null)
-    {
-        var user = new ApplicationUser
-        {
-            FullName = "Test User",
-            UserName = testEmail,
-            Email = testEmail,
-            EmailConfirmed = true
-        };
-        
-        await userManager.CreateAsync(user, "TestPassword123!");
-        await userManager.AddToRoleAsync(user, RoleNames.Employee);
-    }
-}
-
-static async Task SeedPhase5RoleAccountsAsync(WebApplication app)
+static async Task SeedDemoRoleAccountsAsync(WebApplication app, string demoPassword)
 {
     using var scope = app.Services.CreateScope();
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
@@ -259,7 +273,7 @@ static async Task SeedPhase5RoleAccountsAsync(WebApplication app)
                 EmailConfirmed = true
             };
 
-            var createResult = await userManager.CreateAsync(user, "Password123.");
+            var createResult = await userManager.CreateAsync(user, demoPassword);
 
             if (!createResult.Succeeded)
             {
@@ -275,7 +289,7 @@ static async Task SeedPhase5RoleAccountsAsync(WebApplication app)
 
             var updateResult = await userManager.UpdateAsync(user);
             var resetToken = await userManager.GeneratePasswordResetTokenAsync(user);
-            var resetResult = await userManager.ResetPasswordAsync(user, resetToken, "Password123.");
+            var resetResult = await userManager.ResetPasswordAsync(user, resetToken, demoPassword);
 
             if (!updateResult.Succeeded || !resetResult.Succeeded)
             {
@@ -296,52 +310,5 @@ static async Task SeedPhase5RoleAccountsAsync(WebApplication app)
         {
             await userManager.AddToRoleAsync(user, account.Role);
         }
-    }
-}
-
-static async Task SeedAdminUserAsync(WebApplication app)
-{
-    using var scope = app.Services.CreateScope();
-
-    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-
-    const string adminEmail = "admin@test.com";
-    const string adminPassword = "Admin123.";
-
-    if (!await roleManager.RoleExistsAsync(RoleNames.Admin))
-    {
-        await roleManager.CreateAsync(new IdentityRole(RoleNames.Admin));
-    }
-
-    var adminUser = await userManager.FindByEmailAsync(adminEmail);
-
-    if (adminUser == null)
-    {
-        adminUser = new ApplicationUser
-        {
-            FullName = "Admin",
-            UserName = adminEmail,
-            Email = adminEmail,
-            EmailConfirmed = true
-        };
-
-        var result = await userManager.CreateAsync(adminUser, adminPassword);
-
-        if (result.Succeeded)
-        {
-            await userManager.AddToRoleAsync(adminUser, RoleNames.Admin);
-        }
-        else
-        {
-            foreach (var error in result.Errors)
-            {
-                Console.WriteLine($"Admin seed error: {error.Description}");
-            }
-        }
-    }
-    else if (!await userManager.IsInRoleAsync(adminUser, RoleNames.Admin))
-    {
-        await userManager.AddToRoleAsync(adminUser, RoleNames.Admin);
     }
 }

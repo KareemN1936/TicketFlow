@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import horizontalLogo from "../assets/logo horizontal.png";
+import apiClient from "../api/apiClient";
 import "../App.css";
 
 function ResetPassword() {
@@ -44,24 +45,11 @@ function ResetPassword() {
     setIsLoading(true);
 
     try {
-      const response = await fetch("http://localhost:5215/api/auth/reset-password", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email,
-          token,
-          newPassword,
-        }),
+      const { data } = await apiClient.post("/auth/reset-password", {
+        email,
+        token,
+        newPassword,
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(data.message || "Failed to reset password.");
-        return;
-      }
 
       setStatusMessage(data.message);
       setNewPassword("");
@@ -71,7 +59,7 @@ function ResetPassword() {
         navigate("/login");
       }, 2000);
     } catch (err) {
-      setError("An error occurred. Please try again.");
+      setError(err.response?.data?.message || "An error occurred. Please try again.");
       console.error(err);
     } finally {
       setIsLoading(false);

@@ -4,7 +4,7 @@ import type { Notification } from "../types/notification";
 
 export const notificationReceivedEventName = "ticketflow:notification-received";
 
-const apiBaseUrl = String(apiClient.defaults.baseURL || "http://localhost:5215/api");
+const apiBaseUrl = String(apiClient.defaults.baseURL || "/api");
 const backendBaseUrl = apiBaseUrl.replace(/\/api\/?$/i, "");
 
 export function createNotificationConnection(

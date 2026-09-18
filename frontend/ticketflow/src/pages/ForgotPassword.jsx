@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import horizontalLogo from "../assets/logo horizontal.png";
+import apiClient from "../api/apiClient";
 import "../App.css";
 
 function ForgotPassword() {
@@ -22,24 +23,13 @@ function ForgotPassword() {
     setIsLoading(true);
 
     try {
-      const response = await fetch("http://localhost:5215/api/auth/forgot-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim() }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        setError(data.message || "An error occurred. Please try again.");
-        setIsLoading(false);
-        return;
-      }
+      await apiClient.post("/auth/forgot-password", { email: email.trim() });
 
       setSubmittedEmail(email.trim());
       setEmailSent(true);
       setEmail("");
     } catch (err) {
-      setError("Failed to connect to the server. Please check your internet connection.");
+      setError(err.response?.data?.message || "Failed to connect to the server. Please check your internet connection.");
       console.error("Error:", err);
     } finally {
       setIsLoading(false);
